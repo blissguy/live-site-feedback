@@ -1,0 +1,17 @@
+.git
+.github
+.gitignore
+.distignore
+.DS_Store
+.idea
+.vscode
+build
+node_modules
+vendor/bin
+*.zip
+*.log
+npm-debug.log
+yarn-error.log
+README.md
+phase0-keys
+*.pem
