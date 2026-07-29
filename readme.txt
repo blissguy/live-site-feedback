@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.4.0
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -47,6 +47,10 @@ Values in `wp-config.php` always take priority, and the matching field in the ad
 
 In your MarkUp.io account. This plugin connects your site to it and decides who sees the feedback bar.
 
+= Does every page have its own comment list? =
+
+By default, no — everything goes into one list for the whole site, which is usually what you want when a client is reviewing. Pins still sit on the page they were left on. If you would rather each page had its own list, untick "Keep all feedback for this site in one list" on the settings screen.
+
 = Can visitors see the feedback bar? =
 
 No. By default only people who can edit posts see it, and you choose who that includes.
@@ -64,6 +68,17 @@ The plugin removes its own settings. Your comments and markups stay in your Mark
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.6.0 =
+* All feedback for a site now goes into a single list by default, so you can work through a client's comments in one pass instead of checking page by page. Pins still appear on the page they were left on.
+* The shared list is created for you — there is no ID to fetch or paste anywhere.
+* Untick one box if you would rather each page kept its own separate list.
+* The feedback bar now also appears on archives, search results and your shop, which previously had nowhere to put comments.
+
+= 0.5.0 =
+* Logged-in users now comment under their own name, with nothing extra to sign in to. Everyone else still signs in through MarkUp.io as before.
+* Your team's names and pictures appear on their comments automatically, so it is clear who said what. Your WordPress user IDs are never shared — each person is identified by a code that means nothing outside your site.
+* People recognised this way can comment, reply, and mark things as done. Deleting a comment is done in MarkUp.io itself.
 
 = 0.4.0 =
 * The plugin now updates itself. New versions appear on your Plugins screen like any other plugin, so there is no downloading and uploading files by hand.

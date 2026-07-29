@@ -139,6 +139,10 @@ class MBM_LF_Settings {
 
 				<?php $this->render_visibility_fields(); ?>
 
+				<h2 class="title"><?php esc_html_e( 'How people are identified', 'mbm-live-feedback' ); ?></h2>
+
+				<?php $this->render_identity_fields(); ?>
+
 				<h2 class="title"><?php esc_html_e( 'Appearance', 'mbm-live-feedback' ); ?></h2>
 
 				<?php $this->render_appearance_fields(); ?>
@@ -267,6 +271,10 @@ class MBM_LF_Settings {
 				'label' => __( 'Sign-in settings read', 'mbm-live-feedback' ),
 				'ok'    => MBM_LF_Credentials::has( 'iss' ) && MBM_LF_Credentials::has( 'aud' ),
 			],
+			[
+				'label' => __( 'Your team can comment as themselves', 'mbm-live-feedback' ),
+				'ok'    => ( new MBM_LF_Tokens() )->can_sign(),
+			],
 		];
 		?>
 		<ul style="margin:1rem 0;">
@@ -347,7 +355,31 @@ class MBM_LF_Settings {
 			</tr>
 
 			<tr>
-				<th scope="row"><?php esc_html_e( 'New pages', 'mbm-live-feedback' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Comment lists', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<label>
+						<input
+							type="checkbox"
+							name="shared_thread"
+							value="1"
+							<?php checked( (bool) MBM_LF_Options::get( 'shared_thread' ) ); ?>
+						>
+						<strong><?php esc_html_e( 'Keep all feedback for this site in one list', 'mbm-live-feedback' ); ?></strong>
+					</label>
+
+					<p class="description">
+						<?php esc_html_e( 'Recommended. Every comment from every page lands in a single list, so you can work through a client’s feedback in one go instead of hunting page by page. Pins still sit on the page they were left on.', 'mbm-live-feedback' ); ?>
+					</p>
+					<p class="description">
+						<?php esc_html_e( 'Untick it and every page keeps its own separate list instead. Useful if different people own different pages.', 'mbm-live-feedback' ); ?>
+					</p>
+
+					<?php $this->render_shared_list_state(); ?>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Setting up', 'mbm-live-feedback' ); ?></th>
 				<td>
 					<label>
 						<input
@@ -356,10 +388,10 @@ class MBM_LF_Settings {
 							value="1"
 							<?php checked( (bool) MBM_LF_Options::get( 'auto_create_markups' ) ); ?>
 						>
-						<?php esc_html_e( 'Set pages up in MarkUp.io automatically', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Let the plugin set things up in MarkUp.io for me', 'mbm-live-feedback' ); ?>
 					</label>
 					<p class="description">
-						<?php esc_html_e( 'The first time you or a colleague views a page that has not been set up, the plugin creates its MarkUp.io entry. Visitors never trigger this.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Leave this on and you never have to copy an ID by hand. Turn it off only if you want to paste in IDs yourself.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -367,7 +399,7 @@ class MBM_LF_Settings {
 			<tr>
 				<th scope="row">
 					<label for="mbm-lf-default-markup">
-						<?php esc_html_e( 'Site-wide ID', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Shared list ID', 'mbm-live-feedback' ); ?>
 					</label>
 				</th>
 				<td>
@@ -376,18 +408,58 @@ class MBM_LF_Settings {
 						class="regular-text code"
 						id="mbm-lf-default-markup"
 						name="default_markup_id"
-						value="<?php echo esc_attr( $fallback ); ?>"
+						value="<?php echo esc_attr( (string) MBM_LF_Options::get( 'default_markup_id' ) ); ?>"
 					>
 					<p class="description">
-						<?php esc_html_e( 'Optional. Used for any page that has no ID of its own, and for archives and the shop. Leave blank to collect feedback only on pages you have set up individually.', 'mbm-live-feedback' ); ?>
-					</p>
-					<p class="description">
-						<?php esc_html_e( 'Everything sharing one ID also shares one comment list, so pins from different pages will pile up together. It is best used while you are trying things out.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Filled in for you. Only change it if you already have a MarkUp.io entry you would rather collect this site’s feedback in — clear it and a new one will be made.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
 			</tbody>
 		</table>
+		<?php
+	}
+
+	/**
+	 * Show whether the shared list exists yet, and why not if it does not.
+	 */
+	private function render_shared_list_state() {
+		if ( ! MBM_LF_Options::get( 'shared_thread' ) ) {
+			return;
+		}
+
+		$id    = (string) MBM_LF_Options::get( 'default_markup_id' );
+		$error = mbm_lf_markups()->site_wide_error();
+
+		if ( '' !== $id ) {
+			?>
+			<p class="description" style="color:#1d7a3c;">
+				<?php esc_html_e( 'The shared list is ready.', 'mbm-live-feedback' ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		if ( '' !== $error ) {
+			?>
+			<p class="description" style="color:#b32d2e;"><?php echo esc_html( $error ); ?></p>
+			<?php
+			return;
+		}
+
+		if ( ! MBM_LF_Options::get( 'auto_create_markups' ) ) {
+			?>
+			<p class="description" style="color:#996800;">
+				<?php esc_html_e( 'No list yet. Either paste an ID below, or switch “Setting up” back on and the plugin will make one.', 'mbm-live-feedback' ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		?>
+		<p class="description">
+			<?php esc_html_e( 'The shared list will be created the next time you view the site.', 'mbm-live-feedback' ); ?>
+		</p>
 		<?php
 	}
 
@@ -469,6 +541,56 @@ class MBM_LF_Settings {
 					>
 					<p class="description">
 						<?php esc_html_e( 'Only applies when “People who can edit content” is selected. Leave as edit_posts unless you know you need something different.', 'mbm-live-feedback' ); ?>
+					</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Explain how people are identified, and what they can do.
+	 *
+	 * There is deliberately nothing to configure here. MarkUp.io decides what a
+	 * signed-in visitor may do and currently ignores any role we ask for, so a
+	 * setting would be a control that does nothing.
+	 */
+	private function render_identity_fields() {
+		$can_sign = ( new MBM_LF_Tokens() )->can_sign();
+		?>
+		<table class="form-table" role="presentation">
+			<tbody>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Your team', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<?php if ( $can_sign ) : ?>
+						<p style="margin-top:0;">
+							<span style="color:#1d7a3c;font-weight:600;">&#10003;</span>
+							<?php esc_html_e( 'People signed in to this site comment under their own name, with nothing extra to sign in to.', 'mbm-live-feedback' ); ?>
+						</p>
+						<p class="description">
+							<?php esc_html_e( 'They can leave comments, reply, and mark things as done. Deleting a comment is done in MarkUp.io itself.', 'mbm-live-feedback' ); ?>
+						</p>
+						<p class="description">
+							<?php esc_html_e( 'Their name and profile picture are shared with MarkUp.io so their comments are attributable. Your WordPress user IDs are not — each person is identified by a code that means nothing outside this site.', 'mbm-live-feedback' ); ?>
+						</p>
+					<?php else : ?>
+						<p style="margin-top:0;color:#996800;">
+							<?php esc_html_e( 'Everyone signs in through MarkUp.io at the moment. Run the setup above and your team will be recognised automatically instead.', 'mbm-live-feedback' ); ?>
+						</p>
+					<?php endif; ?>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Everyone else', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<p style="margin-top:0;">
+						<?php esc_html_e( 'Visitors without an account here sign in through MarkUp.io, and get whatever your MarkUp.io workspace allows them.', 'mbm-live-feedback' ); ?>
+					</p>
+					<p class="description">
+						<?php esc_html_e( 'Who sees the feedback bar at all is set under “Who can leave feedback” above.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -875,6 +997,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 		return [
 			'enabled'             => ! empty( $raw['enabled'] ),
 			'auto_create_markups' => ! empty( $raw['auto_create_markups'] ),
+			'shared_thread'       => ! empty( $raw['shared_thread'] ),
 			'post_types'        => array_values( array_intersect( $post_types, $allowed_post_types ) ),
 			'roles'             => array_values( array_intersect( $roles, $allowed_roles ) ),
 			'visibility'        => $visibility,

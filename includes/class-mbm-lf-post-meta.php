@@ -139,13 +139,32 @@ class MBM_LF_Post_Meta {
 		$markup_id = self::markup_id( $post->ID );
 		$disabled  = self::is_disabled( $post->ID );
 		$fallback  = (string) MBM_LF_Options::get( 'default_markup_id' );
+		$shared    = (bool) MBM_LF_Options::get( 'shared_thread' );
 		?>
+
+		<?php if ( $shared ) : ?>
+			<p class="description" style="margin-top:0;">
+				<?php esc_html_e( 'This site keeps all feedback in one list, so comments left here go there along with everything else. Nothing to set up per page.', 'mbm-live-feedback' ); ?>
+			</p>
+		<?php endif; ?>
+
 		<p>
 			<label>
 				<input type="checkbox" name="mbm_lf_disabled" value="1" <?php checked( $disabled ); ?>>
 				<?php esc_html_e( 'Turn off feedback for this page', 'mbm-live-feedback' ); ?>
 			</label>
 		</p>
+
+		<?php
+		/*
+		 * Everything below only applies when each page keeps its own list. In
+		 * shared mode these controls would do nothing, so they are not shown at
+		 * all rather than sitting there inert.
+		 */
+		if ( $shared ) {
+			return;
+		}
+		?>
 
 		<p>
 			<label for="mbm-lf-markup-id" style="display:block;font-weight:600;margin-bottom:.25rem;">

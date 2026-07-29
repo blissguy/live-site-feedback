@@ -174,6 +174,132 @@ class MBM_LF_Markups {
 	}
 
 	/**
+	 * The MarkUp.io entry used when the whole site shares one list.
+	 *
+	 * Creates it on first need so nobody has to fetch an ID by hand.
+	 *
+	 * @return string Markup id, or an empty string.
+	 */
+	public function site_wide_id() {
+		$existing = (string) MBM_LF_Options::get( 'default_markup_id' );
+
+		if ( '' !== $existing ) {
+			return $existing;
+		}
+
+		if ( ! MBM_LF_Options::get( 'auto_create_markups' ) ) {
+			return '';
+		}
+
+		// Same reasoning as per-page: only somebody who could fix a problem
+		// should be able to trigger the slow path.
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return '';
+		}
+
+		if ( get_transient( 'mbm_lf_backoff_site' ) ) {
+			return '';
+		}
+
+		$created = $this->create_site_wide();
+
+		return is_wp_error( $created ) ? '' : $created;
+	}
+
+	/**
+	 * Create the shared MarkUp.io entry for this site.
+	 *
+	 * @return string|WP_Error Markup id.
+	 */
+	public function create_site_wide() {
+		if ( ! MBM_LF_Credentials::has( 'api_key' ) ) {
+			return new WP_Error(
+				'mbm_lf_no_api_key',
+				__( 'Add your MarkUp.io API key first.', 'mbm-live-feedback' )
+			);
+		}
+
+		$workspace_id = MBM_LF_Credentials::get( 'workspace_id' );
+
+		if ( '' === $workspace_id ) {
+			return new WP_Error(
+				'mbm_lf_no_workspace',
+				__( 'Run the automatic setup first so we know which workspace to use.', 'mbm-live-feedback' )
+			);
+		}
+
+		if ( ! mbm_lf_provisioner()->site_is_publicly_reachable() ) {
+			delete_transient( 'mbm_lf_site_error' );
+
+			return new WP_Error(
+				'mbm_lf_not_reachable',
+				__( 'MarkUp.io has to be able to load this site to set it up, and it is not reachable from the internet yet. Once the site is live this will work by itself.', 'mbm-live-feedback' )
+			);
+		}
+
+		if ( get_transient( 'mbm_lf_lock_site' ) ) {
+			return new WP_Error(
+				'mbm_lf_locked',
+				__( 'Already setting this up. Refresh in a moment.', 'mbm-live-feedback' )
+			);
+		}
+
+		set_transient( 'mbm_lf_lock_site', 1, 60 );
+
+		$name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+		if ( '' === trim( (string) $name ) ) {
+			$name = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		}
+
+		$markup = mbm_lf_api()->create_markup_from_url( home_url(), $name, $workspace_id );
+
+		delete_transient( 'mbm_lf_lock_site' );
+
+		if ( is_wp_error( $markup ) ) {
+			set_transient( 'mbm_lf_site_error', $markup->get_error_message(), DAY_IN_SECONDS );
+			set_transient( 'mbm_lf_backoff_site', 1, self::RETRY_DELAY );
+
+			return $markup;
+		}
+
+		if ( empty( $markup['id'] ) ) {
+			$message = __( 'MarkUp.io created the entry but did not return an ID for it.', 'mbm-live-feedback' );
+
+			set_transient( 'mbm_lf_site_error', $message, DAY_IN_SECONDS );
+			set_transient( 'mbm_lf_backoff_site', 1, self::RETRY_DELAY );
+
+			return new WP_Error( 'mbm_lf_no_markup_id', $message );
+		}
+
+		MBM_LF_Options::update( [ 'default_markup_id' => $markup['id'] ] );
+
+		delete_transient( 'mbm_lf_site_error' );
+		delete_transient( 'mbm_lf_backoff_site' );
+
+		return $markup['id'];
+	}
+
+	/**
+	 * The last failure recorded for the shared entry.
+	 *
+	 * @return string
+	 */
+	public function site_wide_error() {
+		$value = get_transient( 'mbm_lf_site_error' );
+
+		return is_string( $value ) ? $value : '';
+	}
+
+	/**
+	 * Forget any failure recorded for the shared entry.
+	 */
+	public function clear_site_wide_failure() {
+		delete_transient( 'mbm_lf_site_error' );
+		delete_transient( 'mbm_lf_backoff_site' );
+	}
+
+	/**
 	 * Note a failure and hold off retrying for a while.
 	 *
 	 * A broken key would otherwise mean a failed API call on every single page

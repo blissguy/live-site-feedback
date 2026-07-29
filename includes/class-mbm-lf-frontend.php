@@ -59,6 +59,17 @@ class MBM_LF_Frontend {
 			'debug'     => $this->is_debug(),
 		];
 
+		/*
+		 * Only hand over a token endpoint when we can actually produce a token.
+		 * The library treats a failing callback as a hard error rather than
+		 * falling back to its own sign-in, so offering one we cannot honour
+		 * would leave the visitor stuck instead of merely signing in manually.
+		 */
+		if ( is_user_logged_in() && ( new MBM_LF_Tokens() )->can_sign() ) {
+			$config['tokenEndpoint'] = rest_url( MBM_LF_Rest::NAMESPACE . '/token' );
+			$config['nonce']         = wp_create_nonce( 'wp_rest' );
+		}
+
 		wp_add_inline_script(
 			self::HANDLE_BOOT,
 			'window.mbmLiveFeedback = ' . wp_json_encode( $config ) . ';',
@@ -137,7 +148,7 @@ class MBM_LF_Frontend {
 			return false;
 		}
 
-		if ( ! $this->post_type_enabled() ) {
+		if ( ! $this->location_enabled() ) {
 			return false;
 		}
 
@@ -189,18 +200,25 @@ class MBM_LF_Frontend {
 	}
 
 	/**
-	 * Whether the current post type is one the bar may appear on.
+	 * Whether everything on the site shares one comment list.
 	 *
 	 * @return bool
 	 */
-	private function post_type_enabled() {
-		// A site-wide markup means the bar is not tied to a single post.
-		if ( '' !== (string) MBM_LF_Options::get( 'default_markup_id' ) && ! is_singular() ) {
-			return true;
-		}
+	public function shared_mode() {
+		return (bool) MBM_LF_Options::get( 'shared_thread' );
+	}
 
+	/**
+	 * Whether the bar may appear on whatever is being viewed.
+	 *
+	 * @return bool
+	 */
+	private function location_enabled() {
 		if ( ! is_singular() ) {
-			return false;
+			// Archives, the blog index, search results and the shop have no post
+			// of their own to attach comments to, so they only make sense when
+			// everything shares one list.
+			return $this->shared_mode();
 		}
 
 		return in_array( get_post_type(), MBM_LF_Options::post_types(), true );
@@ -259,19 +277,33 @@ class MBM_LF_Frontend {
 		if ( is_singular() ) {
 			$post_id = get_queried_object_id();
 
-			if ( $post_id && ! MBM_LF_Post_Meta::is_disabled( $post_id ) ) {
+			// An explicit "no feedback here" beats everything, including the
+			// shared list.
+			if ( $post_id && MBM_LF_Post_Meta::is_disabled( $post_id ) ) {
+				return (string) apply_filters( 'mbm_lf_markup_id', '' );
+			}
+
+			/*
+			 * When the site shares one list, page-level ids are deliberately
+			 * ignored rather than taking precedence. Otherwise turning the
+			 * setting on would leave pages that already had their own id
+			 * quietly excluded from the shared list, which is the opposite of
+			 * what "keep it all in one place" should mean. The ids stay stored,
+			 * so switching back restores them.
+			 */
+			if ( $post_id && ! $this->shared_mode() ) {
 				$markup_id = MBM_LF_Post_Meta::markup_id( $post_id );
 
 				// First view of a page that has not been set up yet: create its
-				// MarkUp.io entry now. Only editors reach this, and only once.
+				// entry now. Only editors reach this, and only once.
 				if ( '' === $markup_id && in_array( get_post_type( $post_id ), MBM_LF_Options::post_types(), true ) ) {
 					$markup_id = mbm_lf_markups()->maybe_create_on_view( $post_id );
 				}
 			}
 		}
 
-		if ( '' === $markup_id ) {
-			$markup_id = (string) MBM_LF_Options::get( 'default_markup_id' );
+		if ( '' === $markup_id && $this->shared_mode() ) {
+			$markup_id = mbm_lf_markups()->site_wide_id();
 		}
 
 		/**

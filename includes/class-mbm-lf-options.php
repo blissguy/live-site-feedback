@@ -45,6 +45,7 @@ class MBM_LF_Options {
 			'position'          => 'bottom-right',
 			'theme'             => 'auto',
 			'default_markup_id' => '',
+			'shared_thread'     => true,
 			'auto_create_markups' => true,
 			'rate_limits'       => [],
 		];
