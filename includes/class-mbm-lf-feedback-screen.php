@@ -193,6 +193,36 @@ class MBM_LF_Feedback_Screen {
 	}
 
 	/**
+	 * Say whether notifications are arriving.
+	 *
+	 * Worth stating plainly, because it is the difference between counts that
+	 * update the moment a client comments and counts that lag by a few minutes.
+	 */
+	private function render_delivery_note() {
+		$webhooks = new MBM_LF_Webhooks();
+
+		if ( ! $webhooks->is_registered() ) {
+			esc_html_e( 'These counts refresh every few minutes.', 'mbm-live-feedback' );
+
+			return;
+		}
+
+		$last = $webhooks->last_delivery();
+
+		if ( ! $last ) {
+			esc_html_e( 'MarkUp.io will tell this site as soon as anything changes, though nothing has come through yet.', 'mbm-live-feedback' );
+
+			return;
+		}
+
+		printf(
+			/* translators: %s: human readable time difference, e.g. "5 mins". */
+			esc_html__( 'MarkUp.io last reported a change %s ago.', 'mbm-live-feedback' ),
+			esc_html( human_time_diff( (int) $last['at'] ) )
+		);
+	}
+
+	/**
 	 * Turn a timestamp into something readable.
 	 *
 	 * @param int $time Seconds since the epoch.
