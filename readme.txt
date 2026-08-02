@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.7.1
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,11 @@ The plugin removes its own settings. Your comments and markups stay in your Mark
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.8.0 =
+* Added a Feedback item to the toolbar, visible on the site as well as in the admin, showing how many comments are waiting.
+* Hover it for the pages that need attention and how many each has. Click a page to go straight there; click the toolbar item itself for the full list.
+* The count now updates by itself shortly after a client comments, instead of waiting for someone to open the Feedback screen.
 
 = 0.7.1 =
 * Fixed: the Feedback screen stopped halfway down with an error instead of finishing the page.

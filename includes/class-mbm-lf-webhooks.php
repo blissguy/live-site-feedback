@@ -122,6 +122,15 @@ class MBM_LF_Webhooks {
 		 */
 		mbm_lf_threads()->flush_cache();
 
+		/*
+		 * Fetch again shortly, off this request. Clearing the cache alone would
+		 * leave the toolbar count blank until somebody opened the feedback
+		 * screen — worst at exactly the moment feedback has just arrived.
+		 */
+		if ( ! wp_next_scheduled( 'mbm_lf_refresh_feedback' ) ) {
+			wp_schedule_single_event( time() + 15, 'mbm_lf_refresh_feedback' );
+		}
+
 		$this->record_delivery( $type );
 
 		/**

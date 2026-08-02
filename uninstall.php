@@ -51,6 +51,8 @@ MBM_LF_Options::delete();
 delete_transient( MBM_LF_Updater::CACHE_KEY );
 delete_transient( MBM_LF_Threads::CACHE_KEY );
 
+wp_clear_scheduled_hook( 'mbm_lf_refresh_feedback' );
+
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_MARKUP_ID );
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_DISABLED );
 delete_post_meta_by_key( MBM_LF_Markups::META_ERROR );

@@ -50,6 +50,7 @@ class MBM_LF_Options {
 			'rate_limits'       => [],
 			'webhook_registration_id' => '',
 			'last_delivery'     => [],
+			'feedback_summary'  => [],
 		];
 	}
 

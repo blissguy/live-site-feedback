@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.7.1
+ * Version: 0.8.0
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.7.1' );
+define( 'MBM_LF_VERSION', '0.8.0' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );
@@ -70,6 +70,7 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-rest.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-threads.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-webhooks.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-feedback-screen.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-admin-bar.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-frontend.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-updater.php';
@@ -91,6 +92,14 @@ function mbm_lf_bootstrap() {
 	( new MBM_LF_Rest() )->hooks();
 	( new MBM_LF_Webhooks() )->hooks();
 
+	// The toolbar shows on the front end as well, so this cannot live behind the
+	// is_admin() check below.
+	( new MBM_LF_Admin_Bar() )->hooks();
+
+	// Refreshing the summary happens on a scheduled event, away from anyone's
+	// page load, so it has to be registered everywhere too.
+	add_action( 'mbm_lf_refresh_feedback', 'mbm_lf_refresh_feedback' );
+
 	if ( is_admin() ) {
 		( new MBM_LF_Settings() )->hooks();
 		( new MBM_LF_Feedback_Screen() )->hooks();
@@ -99,6 +108,16 @@ function mbm_lf_bootstrap() {
 	}
 
 	( new MBM_LF_Frontend() )->hooks();
+}
+
+/**
+ * Fetch feedback again in the background.
+ *
+ * Runs on a scheduled event after MarkUp.io reports a change, so the toolbar
+ * count is right without waiting for somebody to open the feedback screen.
+ */
+function mbm_lf_refresh_feedback() {
+	mbm_lf_threads()->all( true );
 }
 
 /**

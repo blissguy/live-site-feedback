@@ -42,6 +42,14 @@ class MBM_LF_Threads {
 	const MAX_MARKUPS = 25;
 
 	/**
+	 * How many pages to keep in the summary the admin bar reads.
+	 *
+	 * A hover menu stops being useful long before this, and the summary is
+	 * stored as an autoloaded option, so it stays small.
+	 */
+	const SUMMARY_PAGES = 12;
+
+	/**
 	 * Every thread we can see, newest activity first.
 	 *
 	 * @param bool $force Skip the cache.
@@ -52,6 +60,16 @@ class MBM_LF_Threads {
 			$cached = get_transient( self::CACHE_KEY );
 
 			if ( is_array( $cached ) ) {
+				/*
+				 * Rebuild the summary if it has gone missing while the cache is
+				 * still warm — after an update that introduced it, or if the
+				 * option was cleared. Without this the toolbar would show
+				 * nothing until the cache happened to expire.
+				 */
+				if ( 0 === $this->summary()['updated'] ) {
+					$this->store_summary( $cached );
+				}
+
 				return $cached;
 			}
 		}
@@ -107,7 +125,71 @@ class MBM_LF_Threads {
 
 		set_transient( self::CACHE_KEY, $result, self::CACHE_TTL );
 
+		$this->store_summary( $result );
+
 		return $result;
+	}
+
+	/**
+	 * Keep a small summary that is always available.
+	 *
+	 * The admin bar appears on every page load, front end included, so it can
+	 * neither call the API nor depend on the cache — a webhook clears that
+	 * cache, which would blank the count at exactly the moment new feedback
+	 * arrives. This is a stored option instead: cheap to read, never empty, and
+	 * refreshed whenever the full list is fetched.
+	 *
+	 * @param array $result Result from all().
+	 */
+	private function store_summary( array $result ) {
+		if ( '' !== $result['error'] ) {
+			// A failed fetch should not wipe a summary that was right until now.
+			return;
+		}
+
+		$pages = [];
+		$open  = 0;
+
+		foreach ( $this->group( $result['threads'] ) as $page ) {
+			$open += $page['open'];
+
+			if ( $page['open'] > 0 && count( $pages ) < self::SUMMARY_PAGES ) {
+				$pages[] = [
+					'title' => $page['title'],
+					'url'   => $page['post_id'] ? get_permalink( $page['post_id'] ) : $page['url'],
+					'open'  => $page['open'],
+				];
+			}
+		}
+
+		MBM_LF_Options::update(
+			[
+				'feedback_summary' => [
+					'open'    => $open,
+					'pages'   => $pages,
+					'updated' => time(),
+				],
+			]
+		);
+	}
+
+	/**
+	 * The stored summary, for anything that must not wait on the API.
+	 *
+	 * @return array{open:int,pages:array,updated:int}
+	 */
+	public function summary() {
+		$summary = MBM_LF_Options::get( 'feedback_summary' );
+
+		if ( ! is_array( $summary ) ) {
+			$summary = [];
+		}
+
+		return [
+			'open'    => isset( $summary['open'] ) ? (int) $summary['open'] : 0,
+			'pages'   => isset( $summary['pages'] ) && is_array( $summary['pages'] ) ? $summary['pages'] : [],
+			'updated' => isset( $summary['updated'] ) ? (int) $summary['updated'] : 0,
+		];
 	}
 
 	/**
@@ -120,10 +202,25 @@ class MBM_LF_Threads {
 	 * @return array{pages:array,truncated:bool,error:string}
 	 */
 	public function by_page() {
-		$data  = $this->all();
+		$data = $this->all();
+
+		return [
+			'pages'     => $this->group( $data['threads'] ),
+			'truncated' => $data['truncated'],
+			'error'     => $data['error'],
+		];
+	}
+
+	/**
+	 * Collapse threads into one row per page.
+	 *
+	 * @param array $threads Normalised threads.
+	 * @return array
+	 */
+	private function group( array $threads ) {
 		$pages = [];
 
-		foreach ( $data['threads'] as $thread ) {
+		foreach ( $threads as $thread ) {
 			$key = $this->page_key( $thread );
 
 			if ( ! isset( $pages[ $key ] ) ) {
@@ -160,11 +257,7 @@ class MBM_LF_Threads {
 			}
 		);
 
-		return [
-			'pages'     => array_values( $pages ),
-			'truncated' => $data['truncated'],
-			'error'     => $data['error'],
-		];
+		return array_values( $pages );
 	}
 
 	/**

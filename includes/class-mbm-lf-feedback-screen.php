@@ -58,27 +58,13 @@ class MBM_LF_Feedback_Screen {
 	/**
 	 * Open count for the menu bubble.
 	 *
-	 * Only ever uses what is already cached: a menu is built on every admin
-	 * page load, and that is no place to wait on somebody else's API.
+	 * Reads the stored summary rather than fetching: a menu is built on every
+	 * admin page load, and that is no place to wait on somebody else's API.
 	 *
 	 * @return int
 	 */
 	private function open_count_for_menu() {
-		$cached = get_transient( MBM_LF_Threads::CACHE_KEY );
-
-		if ( ! is_array( $cached ) || empty( $cached['threads'] ) ) {
-			return 0;
-		}
-
-		$open = 0;
-
-		foreach ( $cached['threads'] as $thread ) {
-			if ( empty( $thread['resolved'] ) ) {
-				$open++;
-			}
-		}
-
-		return $open;
+		return (int) mbm_lf_threads()->summary()['open'];
 	}
 
 	/**
@@ -281,27 +267,10 @@ class MBM_LF_Feedback_Screen {
 	 * Render the dashboard summary.
 	 */
 	public function render_dashboard_widget() {
-		// Uses the cache only, so opening the dashboard never waits on the API.
-		$cached = get_transient( MBM_LF_Threads::CACHE_KEY );
-		$url    = admin_url( 'admin.php?page=' . self::PAGE );
-
-		if ( ! is_array( $cached ) ) {
-			printf(
-				'<p><a href="%s">%s</a></p>',
-				esc_url( $url ),
-				esc_html__( 'Open the feedback list', 'mbm-live-feedback' )
-			);
-
-			return;
-		}
-
-		$open = 0;
-
-		foreach ( $cached['threads'] as $thread ) {
-			if ( empty( $thread['resolved'] ) ) {
-				$open++;
-			}
-		}
+		// Reads the stored summary, so opening the dashboard never waits on the API.
+		$summary = mbm_lf_threads()->summary();
+		$open    = (int) $summary['open'];
+		$url     = admin_url( 'admin.php?page=' . self::PAGE );
 
 		if ( 0 === $open ) {
 			printf(
