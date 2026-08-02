@@ -345,7 +345,14 @@ class MBM_LF_Threads {
 
 		global $wpdb;
 
-		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		/*
+		 * Collecting the distinct values of one meta key is not something
+		 * WP_Query can do without loading every matching post, which is far more
+		 * work than the question deserves. This only runs when the thread list
+		 * is being rebuilt — the result of that rebuild is what gets cached — so
+		 * it is not repeated on ordinary page loads.
+		 */
+		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->prepare(
 				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value != ''",
 				MBM_LF_Post_Meta::META_MARKUP_ID

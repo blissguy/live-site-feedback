@@ -13,5 +13,6 @@ vendor/bin
 npm-debug.log
 yarn-error.log
 README.md
+UPSTREAM.md
 phase0-keys
 *.pem

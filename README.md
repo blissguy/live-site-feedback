@@ -50,6 +50,12 @@ Updates are read from this repository's public releases, so no token or account 
 | `includes/class-mbm-lf-markups.php` | Creates a MarkUp.io entry per page, with locking and backoff. |
 | `includes/class-mbm-lf-post-meta.php` | The per-page panel in the editor. |
 | `includes/class-mbm-lf-frontend.php` | Decides whether to show the feedback bar, and loads it. |
+| `includes/class-mbm-lf-tokens.php` | Signs the short-lived tokens that let WordPress users comment as themselves. |
+| `includes/class-mbm-lf-rest.php` | The token endpoint the feedback bar calls. |
+| `includes/class-mbm-lf-webhooks.php` | Receives change notifications and registers for them. |
+| `includes/class-mbm-lf-threads.php` | Reads comments back from MarkUp.io, cached, grouped by page. |
+| `includes/class-mbm-lf-feedback-screen.php` | The Feedback screen and dashboard widget. |
+| `includes/class-mbm-lf-admin-bar.php` | The Feedback item in the toolbar. |
 | `includes/class-mbm-lf-settings.php` | Admin screen. |
 | `includes/class-mbm-lf-updater.php` | Updates from GitHub releases. |
 
@@ -76,10 +82,16 @@ define( 'MBM_LF_AUD', 'https://api.markup.io/v2/auth/exchange' );
 | `mbm_lf_should_render` | Force the feedback bar on or off for a request. |
 | `mbm_lf_user_can_see` | Decide who sees it, beyond the built-in options. |
 | `mbm_lf_markup_id` | Change which MarkUp.io entry a request uses. |
-| `mbm_lf_render_options` | Change the SDK's render options — most usefully `commentableContainer`, to stop visitors pinning comments onto site furniture. |
+| `mbm_lf_render_options` | Change the SDK's render options. Comments can be left anywhere by design; `commentableContainer` can fence them into one area, but note it is an allow-list, so the header and footer would stop accepting comments too. |
 | `mbm_lf_allowed_origins` | Add origins before running setup. Registrations can't be edited afterwards. |
 | `mbm_lf_api_base_url` | Point at a different MarkUp.io environment. |
 | `mbm_lf_github_repo` | Change where updates come from. |
+| `mbm_lf_token_claims` | Change the claims placed in a visitor's identity token. |
+| `mbm_lf_user_role` | Change the MarkUp.io role claimed for a user. |
+
+There is also one action, `mbm_lf_webhook_received`. Its payload is unauthenticated — MarkUp.io
+does not sign deliveries — so treat it as a hint that something changed and read the real state
+back through the API before acting on it.
 
 ---
 
@@ -99,20 +111,15 @@ Versioning is strict semver: a patch is fixes only, a minor is any new functiona
 
 ## Notes on the MarkUp.io SDK
 
-A few things worth knowing, none of which match the published documentation:
+Several things about MarkUp.io do not match its documentation, and this plugin works around
+them. They are written up in **[UPSTREAM.md](UPSTREAM.md)** — what happens, what we do instead,
+what to change once it is fixed, and how to check.
 
-- The documented CDN URL (`v1.0.0`) **404s**. `1.0.0-rc.1` is the only published build, and the
-  install snippet the MarkUp.io dashboard generates points at the dead one.
-- `POST /api/v2/auth/exchange` is documented as requiring the secret API key. It does not — and
-  sending it makes the call fail with a 401. The browser authenticates with the public key in
-  the request body.
-- Installations can't be edited. Changing the allowed origins means creating a new one, which
-  issues a new public key — hence one installation per environment.
-- `GET /api/v2/auth/config` returns undocumented rate limits: 1000 requests and 100 sign-ins per
-  minute.
+Worth re-reading whenever MarkUp.io ships a release. The SDK is still `1.0.0-rc.1`, so some of it
+may resolve at 1.0.0 GA.
 
-The library is pinned to an exact version with an integrity hash, so if the file ever changes
-underneath us the browser refuses to run it rather than executing something unverified.
+The browser library is pinned to an exact version with an integrity hash, so if the file ever
+changes underneath us the browser refuses to run it rather than executing something unverified.
 
 ---
 

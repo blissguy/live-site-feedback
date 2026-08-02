@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.8.0
+ * Version: 0.8.1
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.8.0' );
+define( 'MBM_LF_VERSION', '0.8.1' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );

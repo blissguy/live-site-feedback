@@ -75,6 +75,13 @@ class MBM_LF_Settings {
 			wp_die( esc_html__( 'You do not have permission to manage these settings.', 'mbm-live-feedback' ) );
 		}
 
+		/*
+		 * Reading which message to show after a redirect. Not form processing —
+		 * it decides between a handful of fixed strings and changes nothing — and
+		 * the screen is already behind a capability check. Whatever arrives is
+		 * reduced to a key and matched against a known list.
+		 */
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$notice = isset( $_GET['mbm_lf_notice'] ) ? sanitize_key( wp_unslash( $_GET['mbm_lf_notice'] ) ) : '';
 		?>
 		<div class="wrap">
@@ -106,7 +113,7 @@ class MBM_LF_Settings {
 					$this->render_text_row(
 						'public_key',
 						__( 'Site identifier', 'mbm-live-feedback' ),
-						__( 'From your SDK installation in MarkUp.io. Unlike the API key this one is safe to appear in your pages, and the feedback bar will not load without it.', 'mbm-live-feedback' )
+						__( 'Filled in for you when you press Set up. Unlike the API key this one is safe to appear in your pages, and the feedback bar will not load without it.', 'mbm-live-feedback' )
 					);
 					?>
 					</tbody>
@@ -205,9 +212,11 @@ class MBM_LF_Settings {
 					<?php disabled( ! $has_key ); ?>
 				>
 					<?php
-					echo $provisioned
-						? esc_html__( 'Check and repair setup', 'mbm-live-feedback' )
-						: esc_html__( 'Set up automatically', 'mbm-live-feedback' );
+					echo esc_html(
+						$provisioned
+							? __( 'Check and repair setup', 'mbm-live-feedback' )
+							: __( 'Set up automatically', 'mbm-live-feedback' )
+					);
 					?>
 				</button>
 				<span id="mbm-lf-provision-result" style="margin-left:.5rem;"></span>

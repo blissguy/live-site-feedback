@@ -312,8 +312,11 @@ class MBM_LF_Post_Meta {
 			return;
 		}
 
+		// sanitize_markup_id() is stricter than sanitize_text_field(), but running
+		// the standard one first keeps the intent obvious to anyone reading, and
+		// to the tooling that checks for it.
 		$markup_id = isset( $_POST['mbm_lf_markup_id'] )
-			? self::sanitize_markup_id( wp_unslash( $_POST['mbm_lf_markup_id'] ) )
+			? self::sanitize_markup_id( sanitize_text_field( wp_unslash( $_POST['mbm_lf_markup_id'] ) ) )
 			: '';
 
 		if ( '' === $markup_id ) {
