@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.6.0
+ * Version: 0.7.0
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.6.0' );
+define( 'MBM_LF_VERSION', '0.7.0' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );
@@ -67,6 +67,9 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-markups.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-post-meta.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-tokens.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-rest.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-threads.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-webhooks.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-feedback-screen.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-frontend.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-updater.php';
@@ -83,12 +86,14 @@ function mbm_lf_bootstrap() {
 	// do not run in an admin context.
 	( new MBM_LF_Updater() )->hooks();
 
-	// The token route has to exist for REST requests, which are neither admin
+	// These routes have to exist for REST requests, which are neither admin
 	// nor front-end.
 	( new MBM_LF_Rest() )->hooks();
+	( new MBM_LF_Webhooks() )->hooks();
 
 	if ( is_admin() ) {
 		( new MBM_LF_Settings() )->hooks();
+		( new MBM_LF_Feedback_Screen() )->hooks();
 
 		return;
 	}
@@ -124,6 +129,21 @@ function mbm_lf_markups() {
 	}
 
 	return $markups;
+}
+
+/**
+ * Shared thread reader instance.
+ *
+ * @return MBM_LF_Threads
+ */
+function mbm_lf_threads() {
+	static $threads = null;
+
+	if ( null === $threads ) {
+		$threads = new MBM_LF_Threads();
+	}
+
+	return $threads;
 }
 
 /**

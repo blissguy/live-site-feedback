@@ -48,6 +48,8 @@ class MBM_LF_Options {
 			'shared_thread'     => true,
 			'auto_create_markups' => true,
 			'rate_limits'       => [],
+			'webhook_registration_id' => '',
+			'last_delivery'     => [],
 		];
 	}
 

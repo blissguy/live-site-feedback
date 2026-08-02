@@ -18,11 +18,38 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-options.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-post-meta.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-markups.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-updater.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-threads.php';
+
+/*
+ * Tell MarkUp.io to stop notifying this site before the credentials go.
+ *
+ * Skipping this would leave a registration pointing at an endpoint that no
+ * longer exists, and MarkUp.io would keep trying to deliver to it. Done by hand
+ * rather than through the API client, because only this file is loaded during
+ * an uninstall. Best effort: a failure here must never stop the uninstall.
+ */
+$mbm_lf_registration = MBM_LF_Options::get( 'webhook_registration_id' );
+$mbm_lf_api_key      = MBM_LF_Credentials::get( 'api_key' );
+
+if ( is_string( $mbm_lf_registration ) && '' !== $mbm_lf_registration && '' !== $mbm_lf_api_key ) {
+	wp_remote_request(
+		'https://api.markup.io/api/v2/webhook-registrations/' . rawurlencode( $mbm_lf_registration ),
+		[
+			'method'  => 'DELETE',
+			'timeout' => 10,
+			'headers' => [
+				'Authorization'      => 'Bearer ' . $mbm_lf_api_key,
+				'Markup-API-Version' => '2023-02-22',
+			],
+		]
+	);
+}
 
 MBM_LF_Credentials::delete_all();
 MBM_LF_Options::delete();
 
 delete_transient( MBM_LF_Updater::CACHE_KEY );
+delete_transient( MBM_LF_Threads::CACHE_KEY );
 
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_MARKUP_ID );
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_DISABLED );

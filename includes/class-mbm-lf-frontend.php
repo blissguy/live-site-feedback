@@ -330,8 +330,10 @@ class MBM_LF_Frontend {
 		/**
 		 * Filters the SDK render options.
 		 *
-		 * Useful for pointing `commentableContainer` at a theme's content
-		 * wrapper so visitors cannot pin comments onto site furniture.
+		 * Comments can be left anywhere on the page by design — the header and
+		 * footer get feedback too. A site that genuinely needs to fence them
+		 * into one area can set `commentableContainer` here, but note it is an
+		 * allow-list: anything outside it stops accepting comments entirely.
 		 *
 		 * @param array $options Render options.
 		 */

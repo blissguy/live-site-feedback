@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.6.0
+Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,12 @@ The plugin removes its own settings. Your comments and markups stay in your Mark
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.7.0 =
+* Added a Feedback screen listing every page a client has commented on, how many comments it has, and how many still need attention. Click a page to open it on the site, where the feedback bar shows the comments in place.
+* The number of comments waiting appears next to the menu, and on your dashboard.
+* MarkUp.io now tells the site as soon as feedback changes, so the counts stay current.
+* Removed the option to restrict which part of a page accepts comments — people should be able to comment on the header and footer too.
 
 = 0.6.0 =
 * All feedback for a site now goes into a single list by default, so you can work through a client's comments in one pass instead of checking page by page. Pins still appear on the page they were left on.

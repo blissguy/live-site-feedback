@@ -90,6 +90,12 @@ class MBM_LF_Api_Client {
 			return $this->error_from_response( $status, $json );
 		}
 
+		// A successful delete answers 204 with no body at all. That is a
+		// success, not an unreadable response.
+		if ( 204 === $status || '' === trim( (string) $raw ) ) {
+			return [];
+		}
+
 		if ( ! is_array( $json ) ) {
 			return new WP_Error(
 				'mbm_lf_bad_response',
@@ -97,8 +103,16 @@ class MBM_LF_Api_Client {
 			);
 		}
 
-		// Successful responses wrap their payload in a `data` envelope. A 204
-		// has no body at all.
+		/*
+		 * Payloads come wrapped in a `data` envelope, but the shape inside it
+		 * varies by endpoint and callers have to know which they are getting:
+		 *
+		 *   /workspace              → data is the object itself
+		 *   /threads                → data.threads is the list, plus totals
+		 *   /webhook-registrations  → data.data is the list
+		 *
+		 * Only the outer envelope is unwrapped here.
+		 */
 		return isset( $json['data'] ) && is_array( $json['data'] ) ? $json['data'] : [];
 	}
 

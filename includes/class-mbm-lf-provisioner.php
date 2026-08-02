@@ -66,7 +66,7 @@ class MBM_LF_Provisioner {
 			if ( ! is_wp_error( $existing ) ) {
 				$done['installation'] = __( 'Already registered — left as it is.', 'mbm-live-feedback' );
 
-				return $this->read_token_settings( $done );
+				return $this->register_notifications( $this->read_token_settings( $done ) );
 			}
 
 			if ( ! $this->is_missing( $existing ) ) {
@@ -92,7 +92,28 @@ class MBM_LF_Provisioner {
 			$done['warning'] = $created['key_conflict'];
 		}
 
-		return $this->read_token_settings( $done );
+		$done = $this->read_token_settings( $done );
+
+		return $this->register_notifications( $done );
+	}
+
+	/**
+	 * Ask MarkUp.io to notify this site when feedback changes.
+	 *
+	 * Not fatal if it fails — the admin screen falls back to refreshing on a
+	 * timer, so feedback still shows up, just a little later.
+	 *
+	 * @param array $done Summary so far.
+	 * @return array
+	 */
+	private function register_notifications( array $done ) {
+		$result = ( new MBM_LF_Webhooks() )->register();
+
+		$done['notifications'] = is_wp_error( $result )
+			? $result->get_error_message()
+			: __( 'MarkUp.io will tell this site when feedback changes.', 'mbm-live-feedback' );
+
+		return $done;
 	}
 
 	/**
