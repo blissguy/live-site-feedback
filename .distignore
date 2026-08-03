@@ -14,5 +14,6 @@ npm-debug.log
 yarn-error.log
 README.md
 UPSTREAM.md
+MOTION.md
 phase0-keys
 *.pem

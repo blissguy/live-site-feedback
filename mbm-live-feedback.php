@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.8.1
+ * Version: 0.9.0
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.8.1' );
+define( 'MBM_LF_VERSION', '0.9.0' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );
@@ -74,6 +74,10 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-admin-bar.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-frontend.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-updater.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-client.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-settings.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-queue.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-tasks.php';
 
 add_action( 'plugins_loaded', 'mbm_lf_bootstrap' );
 
@@ -96,6 +100,19 @@ function mbm_lf_bootstrap() {
 	// is_admin() check below.
 	( new MBM_LF_Admin_Bar() )->hooks();
 
+	/*
+	 * Motion only wires itself in once a key exists. Without one there is no
+	 * queue, no scheduled work and no table — someone not using Motion carries
+	 * none of it.
+	 */
+	if ( mbm_lf_motion()->has_key() ) {
+		( new MBM_LF_Motion_Tasks() )->hooks();
+
+		if ( is_admin() ) {
+			MBM_LF_Motion_Queue::maybe_upgrade();
+		}
+	}
+
 	// Refreshing the summary happens on a scheduled event, away from anyone's
 	// page load, so it has to be registered everywhere too.
 	add_action( 'mbm_lf_refresh_feedback', 'mbm_lf_refresh_feedback' );
@@ -103,6 +120,11 @@ function mbm_lf_bootstrap() {
 	if ( is_admin() ) {
 		( new MBM_LF_Settings() )->hooks();
 		( new MBM_LF_Feedback_Screen() )->hooks();
+
+		// The Motion section is the one place the integration shows itself
+		// before it has been connected. Everything else it does stays behind
+		// mbm_lf_motion()->has_key().
+		( new MBM_LF_Motion_Settings() )->hooks();
 
 		return;
 	}
@@ -163,6 +185,21 @@ function mbm_lf_threads() {
 	}
 
 	return $threads;
+}
+
+/**
+ * Shared Motion client instance.
+ *
+ * @return MBM_LF_Motion_Client
+ */
+function mbm_lf_motion() {
+	static $motion = null;
+
+	if ( null === $motion ) {
+		$motion = new MBM_LF_Motion_Client();
+	}
+
+	return $motion;
 }
 
 /**

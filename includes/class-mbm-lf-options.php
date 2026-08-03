@@ -51,6 +51,10 @@ class MBM_LF_Options {
 			'webhook_registration_id' => '',
 			'last_delivery'     => [],
 			'feedback_summary'  => [],
+			'motion_workspace_id' => '',
+			'motion_project_id' => '',
+			'motion_default_assignee' => '',
+			'motion_rate_limit' => 120,
 		];
 	}
 
