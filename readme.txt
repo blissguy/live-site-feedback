@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.8.1
+Stable tag: 0.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,13 +61,20 @@ It is encrypted before it is stored, using your site's own security keys. Keepin
 
 = What happens if I uninstall the plugin? =
 
-The plugin removes its own settings. Your comments and markups stay in your MarkUp.io account, untouched.
+The plugin removes its own settings and stops MarkUp.io notifying your site. Your comments and markups stay in your MarkUp.io account, and any tasks already created stay in Motion. Nothing you or your clients wrote is deleted.
 
 = How does the plugin update itself? =
 
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.9.0 =
+* Added an optional Motion connection. Once you connect it, every new comment becomes a task in the project you choose, given to whoever wrote that page.
+* Replies to a comment are added to the same task rather than creating another one.
+* Each task quotes the comment and links straight back to the pin on the page.
+* Work is sent in the background, so nobody waits on it, and the settings screen shows what is waiting and anything that failed.
+* Leave the Motion key empty and none of this runs at all.
 
 = 0.8.1 =
 * Clearer wording in a few places, and a tidy-up of the code behind the settings screen. Nothing changes in how the plugin behaves.
