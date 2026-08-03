@@ -319,8 +319,25 @@ Verified:
 | Motion's comment endpoint with our Markdown | Posted; renders as bold attribution over a blockquote |
 | M1's bare-string link after the shape change | Still resolves to the right task |
 
-Untested from here: MarkUp.io actually returning a reply, since no thread on the test site has
-one yet. Needs a real reply left on the site.
+Then verified end to end against a real thread, with a real reply left through the feedback bar
+on the site:
+
+```
+Home — "Thread working?"
+  description  Thread working? · Left by admin · on Home · pin #13 · deep link
+  comment      admin replied on the site: "here's a test comment"
+```
+
+Both the comment and the reply came from MarkUp.io rather than from the delivery, and the deep
+link resolves to the real pin.
+
+### A caution learned here
+
+The first M1 test used a **hand-written delivery**, which produced a task in Motion describing a
+comment nobody had left and linking to a thread id that does not exist. It read exactly like real
+client feedback. Fabricated payloads are fine for exercising a code path, but anything they
+create in a real account has to be cleaned up or clearly labelled — test data that is
+indistinguishable from real data is worse than no test.
 
 **M3 — Resolving closes the task.** Look up `isResolvedStatus` for the workspace and `PATCH`.
 
