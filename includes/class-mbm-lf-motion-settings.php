@@ -25,6 +25,7 @@ class MBM_LF_Motion_Settings {
 		add_action( 'mbm_lf_settings_sections', [ $this, 'render' ] );
 		add_action( 'mbm_lf_save_settings', [ $this, 'save' ] );
 		add_action( 'wp_ajax_mbm_lf_motion_test', [ $this, 'ajax_test' ] );
+		add_action( 'admin_post_mbm_lf_motion_refresh', [ $this, 'handle_refresh' ] );
 	}
 
 	/**
@@ -64,6 +65,19 @@ class MBM_LF_Motion_Settings {
 					<?php esc_html_e( 'Test Motion connection', 'mbm-live-feedback' ); ?>
 				</button>
 				<span id="mbm-lf-motion-test-result" style="margin-left:.5rem;"></span>
+			</p>
+
+			<p class="description" style="max-width:44rem;">
+				<?php esc_html_e( 'The lists above are remembered for an hour so this screen stays quick. Just made a new project or added someone to the team? Fetch them again now:', 'mbm-live-feedback' ); ?>
+			</p>
+
+			<p>
+				<a
+					href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_refresh' ), 'mbm_lf_motion_refresh' ) ); ?>"
+					class="button button-secondary"
+				>
+					<?php esc_html_e( 'Fetch workspaces and projects again', 'mbm-live-feedback' ); ?>
+				</a>
 			</p>
 
 			<p class="description" style="max-width:44rem;">
@@ -354,6 +368,43 @@ class MBM_LF_Motion_Settings {
 				'motion_default_assignee' => $assignee,
 			]
 		);
+	}
+
+	/**
+	 * Forget the cached lists and read them again.
+	 *
+	 * A link rather than a form, because this section lives inside the main
+	 * settings form and a nested one is not allowed.
+	 */
+	public function handle_refresh() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
+		}
+
+		check_admin_referer( 'mbm_lf_motion_refresh' );
+
+		mbm_lf_motion()->flush_caches();
+
+		// Warm them straight away so the screen we return to is already right.
+		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
+
+		mbm_lf_motion()->workspaces( true );
+
+		if ( '' !== $workspace ) {
+			mbm_lf_motion()->projects( $workspace, true );
+			mbm_lf_motion()->users( $workspace, true );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => MBM_LF_Settings::PAGE,
+					'mbm_lf_notice' => 'motion-refreshed',
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
 	}
 
 	/* ---------------------------------------------------------------------

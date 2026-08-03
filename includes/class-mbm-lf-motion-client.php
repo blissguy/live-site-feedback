@@ -27,9 +27,14 @@ class MBM_LF_Motion_Client {
 	const BASE_URL = 'https://api.usemotion.com/v1';
 
 	/**
-	 * How long to keep the lists Motion is unlikely to change hourly.
+	 * How long to keep the workspace, project and people lists.
+	 *
+	 * An hour rather than a day: these change whenever somebody adds a project
+	 * or a colleague, and waiting a day to notice is worse than the cost of
+	 * re-reading them. Three requests an hour is nothing against the limit, and
+	 * the settings screen has a button for when even that is too slow.
 	 */
-	const CACHE_TTL = DAY_IN_SECONDS;
+	const CACHE_TTL = HOUR_IN_SECONDS;
 
 	/**
 	 * Cache key for workspaces.
