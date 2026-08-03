@@ -90,9 +90,25 @@ class MBM_LF_Motion_Tasks {
 			return;
 		}
 
+		if ( 'comment_resolved' === $type || 'comment_unresolved' === $type ) {
+			MBM_LF_Motion_Queue::add(
+				'comment_resolved' === $type ? 'resolve_task' : 'reopen_task',
+				$thread_id,
+				[]
+			);
+
+			return;
+		}
+
+		if ( 'comment_updated' === $type ) {
+			// Priority has no event of its own, so an edit is the only signal we
+			// get that it may have changed.
+			MBM_LF_Motion_Queue::add( 'sync_priority', $thread_id, [] );
+
+			return;
+		}
+
 		if ( 'comment_created' !== $type ) {
-			// Resolving arrives in M3. Ignoring it now is better than queueing
-			// work nothing knows how to do.
 			return;
 		}
 
@@ -206,6 +222,18 @@ class MBM_LF_Motion_Tasks {
 			return;
 		}
 
+		if ( 'resolve_task' === $job['action'] || 'reopen_task' === $job['action'] ) {
+			$this->set_status( $job, 'resolve_task' === $job['action'] );
+
+			return;
+		}
+
+		if ( 'sync_priority' === $job['action'] ) {
+			$this->sync_priority( $job );
+
+			return;
+		}
+
 		MBM_LF_Motion_Queue::fail(
 			$job,
 			sprintf(
@@ -246,6 +274,12 @@ class MBM_LF_Motion_Tasks {
 
 		if ( '' !== $assignee ) {
 			$body['assigneeId'] = $assignee;
+		}
+
+		$priority = $this->priority_for_thread( $thread_id );
+
+		if ( '' !== $priority ) {
+			$body['priority'] = $priority;
 		}
 
 		/**
@@ -429,6 +463,208 @@ class MBM_LF_Motion_Tasks {
 	}
 
 	/**
+	 * Move a task to the resolved status, or back out of it.
+	 *
+	 * One request, sending only the field being changed. Motion's documentation
+	 * says an update requires `name` and `workspaceId`; in practice `workspaceId`
+	 * is rejected outright ("property workspaceId should not exist") and `name`
+	 * is not needed. Sending only the status is therefore both correct and
+	 * safer — a name we generated can never overwrite a rename somebody made by
+	 * hand in Motion.
+	 *
+	 * @param array $job      Queue row.
+	 * @param bool  $resolved Whether the comment is now resolved.
+	 */
+	private function set_status( array $job, $resolved ) {
+		$task_id = $this->task_for_thread( (string) $job['thread_id'] );
+
+		if ( '' === $task_id ) {
+			MBM_LF_Motion_Queue::fail(
+				$job,
+				__( 'Waiting for this page\'s task to be created first.', 'mbm-live-feedback' )
+			);
+
+			return;
+		}
+
+		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
+
+		$status = $resolved
+			? mbm_lf_motion()->resolved_status( $workspace )
+			: mbm_lf_motion()->default_status( $workspace );
+
+		if ( '' === $status ) {
+			MBM_LF_Motion_Queue::fail(
+				$job,
+				__( 'Could not work out which status this workspace uses for finished work.', 'mbm-live-feedback' ),
+				true
+			);
+
+			return;
+		}
+
+		MBM_LF_Motion_Queue::spend();
+
+		$result = mbm_lf_motion()->request(
+			'PATCH',
+			'/tasks/' . rawurlencode( $task_id ),
+			[ 'status' => $status ]
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$this->handle_error( $job, $result );
+
+			return;
+		}
+
+		MBM_LF_Motion_Queue::complete( $job['id'] );
+	}
+
+	/**
+	 * Copy the comment's priority onto the task.
+	 *
+	 * @param array $job Queue row.
+	 */
+	private function sync_priority( array $job ) {
+		$task_id = $this->task_for_thread( (string) $job['thread_id'] );
+
+		if ( '' === $task_id ) {
+			// An edit to a comment we never made a task for is nothing to do.
+			MBM_LF_Motion_Queue::complete( $job['id'] );
+
+			return;
+		}
+
+		$priority = $this->priority_for_thread( (string) $job['thread_id'] );
+
+		if ( '' === $priority ) {
+			// No priority set in MarkUp.io. Leaving Motion's alone is kinder than
+			// resetting a priority somebody chose there.
+			MBM_LF_Motion_Queue::complete( $job['id'] );
+
+			return;
+		}
+
+		MBM_LF_Motion_Queue::spend();
+
+		$result = mbm_lf_motion()->request(
+			'PATCH',
+			'/tasks/' . rawurlencode( $task_id ),
+			[ 'priority' => $priority ]
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$this->handle_error( $job, $result );
+
+			return;
+		}
+
+		MBM_LF_Motion_Queue::complete( $job['id'] );
+	}
+
+	/**
+	 * The Motion priority matching a thread's, if it has one.
+	 *
+	 * MarkUp.io does not store this as a name. Its own SDK converts the four
+	 * labels to a number before sending them:
+	 *
+	 *     critical => 3, high => 3, medium => 2, low => 1, none => 0
+	 *
+	 * Note that **critical and high are the same number**, so once stored they
+	 * cannot be told apart. Three therefore becomes HIGH rather than ASAP:
+	 * quietly escalating every "high" comment to the most urgent thing in
+	 * somebody's day would be worse than under-calling the rare "critical" one.
+	 *
+	 * The number lives on the thread's root message rather than the thread, so
+	 * several shapes are accepted — a name is handled too, in case the API ever
+	 * returns one.
+	 *
+	 * @param string $thread_id MarkUp thread id.
+	 * @return string One of Motion's priorities, or an empty string.
+	 */
+	private function priority_for_thread( $thread_id ) {
+		$thread = mbm_lf_api()->request( 'GET', '/api/v2/threads/' . rawurlencode( $thread_id ) );
+
+		if ( is_wp_error( $thread ) ) {
+			return '';
+		}
+
+		$raw = null;
+
+		// On the thread itself, then on its first message, which is where the
+		// SDK actually puts it.
+		foreach ( [ 'priority', 'priorityId' ] as $field ) {
+			if ( isset( $thread[ $field ] ) && null !== $thread[ $field ] && '' !== $thread[ $field ] ) {
+				$raw = $thread[ $field ];
+				break;
+			}
+		}
+
+		if ( null === $raw && ! empty( $thread['messages'][0] ) && is_array( $thread['messages'][0] ) ) {
+			foreach ( [ 'priority', 'priorityId' ] as $field ) {
+				if ( isset( $thread['messages'][0][ $field ] ) && null !== $thread['messages'][0][ $field ] ) {
+					$raw = $thread['messages'][0][ $field ];
+					break;
+				}
+			}
+		}
+
+		if ( null === $raw ) {
+			return '';
+		}
+
+		// An object such as { id, name }.
+		if ( is_array( $raw ) ) {
+			foreach ( [ 'name', 'slug', 'label', 'value' ] as $field ) {
+				if ( ! empty( $raw[ $field ] ) ) {
+					$raw = $raw[ $field ];
+					break;
+				}
+			}
+		}
+
+		$by_number = [
+			3 => 'HIGH',
+			2 => 'MEDIUM',
+			1 => 'LOW',
+		];
+
+		$by_name = [
+			'critical' => 'ASAP',
+			'high'     => 'HIGH',
+			'medium'   => 'MEDIUM',
+			'low'      => 'LOW',
+		];
+
+		/**
+		 * Filters how MarkUp.io priorities become Motion ones.
+		 *
+		 * MarkUp.io sends a number, where 3 covers both "critical" and "high".
+		 * Change `by_number[3]` to `ASAP` if a site would rather over-escalate
+		 * than under-call.
+		 *
+		 * @param array $map Keys `by_number` and `by_name`.
+		 */
+		$map = (array) apply_filters(
+			'mbm_lf_motion_priority_map',
+			[
+				'by_number' => $by_number,
+				'by_name'   => $by_name,
+			]
+		);
+
+		if ( is_numeric( $raw ) ) {
+			$number = (int) $raw;
+
+			return isset( $map['by_number'][ $number ] ) ? (string) $map['by_number'][ $number ] : '';
+		}
+
+		$name = strtolower( trim( (string) $raw ) );
+
+		return isset( $map['by_name'][ $name ] ) ? (string) $map['by_name'][ $name ] : '';
+	}
+
+	/**
 	 * Decide what a failure means for the job.
 	 *
 	 * @param array    $job   Queue row.
@@ -588,9 +824,16 @@ class MBM_LF_Motion_Tasks {
 	 */
 	private function assignee_for( $post_id ) {
 		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
-		$fallback  = (string) MBM_LF_Options::get( 'motion_default_assignee' );
+		$assignee  = (string) MBM_LF_Options::get( 'motion_default_assignee' );
 
-		if ( $post_id ) {
+		/*
+		 * Some sites want everything to land on one person regardless of who
+		 * wrote the page — the author may have been a freelancer, or may have
+		 * left. Assigning work to somebody who is gone is worse than not trying.
+		 */
+		$always_fallback = (bool) MBM_LF_Options::get( 'motion_always_fallback' );
+
+		if ( ! $always_fallback && $post_id ) {
 			$author = (int) get_post_field( 'post_author', $post_id );
 			$email  = $author ? (string) get_the_author_meta( 'user_email', $author ) : '';
 
@@ -598,7 +841,7 @@ class MBM_LF_Motion_Tasks {
 				$matched = mbm_lf_motion()->user_id_for_email( $email, $workspace );
 
 				if ( '' !== $matched ) {
-					return $matched;
+					$assignee = $matched;
 				}
 			}
 		}
@@ -606,10 +849,14 @@ class MBM_LF_Motion_Tasks {
 		/**
 		 * Filters who a piece of feedback is given to in Motion.
 		 *
-		 * @param string $assignee Motion user id.
+		 * Applied to whatever was decided, including the fallback, so this always
+		 * has the last word.
+		 *
+		 * @param string $assignee Motion user id, possibly empty.
 		 * @param int    $post_id  The page, or 0.
+		 * @param bool   $forced   Whether the fallback was used regardless of authorship.
 		 */
-		return (string) apply_filters( 'mbm_lf_motion_assignee', $fallback, $post_id );
+		return (string) apply_filters( 'mbm_lf_motion_assignee', $assignee, $post_id, $always_fallback );
 	}
 
 	/* ---------------------------------------------------------------------

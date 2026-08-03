@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.9.0
+Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,11 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.10.0 =
+* Marking a comment as done now completes its Motion task, and reopening the comment puts the task back.
+* A comment's priority is copied to its task.
+* Added an option to always give feedback to one person, whoever wrote the page. Useful when pages were built by a freelancer or by somebody who has since left.
 
 = 0.9.0 =
 * Added an optional Motion connection. Once you connect it, every new comment becomes a task in the project you choose, given to whoever wrote that page.

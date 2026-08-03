@@ -124,6 +124,24 @@ API uses ISO 8601 strings. `MBM_LF_Threads::to_timestamp()` accepts both.
 
 ---
 
+## 7. Motion's documentation is wrong in three places
+
+Not MarkUp.io, but the same problem and the same standing question — worth re-checking whenever
+Motion changes their API.
+
+- **Workspace statuses come back as `taskStatuses`**, documented as `statuses`. Reading the
+  documented name finds nothing, silently.
+- **`GET /v1/projects` requires `workspaceId`**, documented as optional. Without it the answer is
+  `Validation failed`.
+- **`PATCH /v1/tasks/{id}` rejects `workspaceId`**, documented as required — *"property
+  workspaceId should not exist"*. `name` is not required either, despite being documented so.
+
+All three are handled. If Motion corrects them, nothing here breaks: the client accepts either
+status field name, always sends a workspace to the projects endpoint, and sends only changed
+fields on an update.
+
+---
+
 ## Undocumented but useful
 
 Not bugs — just things worth knowing that the documentation does not mention.

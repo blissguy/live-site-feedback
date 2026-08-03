@@ -339,7 +339,50 @@ client feedback. Fabricated payloads are fine for exercising a code path, but an
 create in a real account has to be cleaned up or clearly labelled — test data that is
 indistinguishable from real data is worse than no test.
 
-**M3 — Resolving closes the task.** Look up `isResolvedStatus` for the workspace and `PATCH`.
+**M3 — Resolving closes the task.** ✅ Built and verified 2026-08-03.
+
+Resolving a comment moves its task to the workspace's resolved status; reopening moves it back to
+the default. Verified against the real task: **Todo → Completed → Todo**, with the task name
+untouched throughout.
+
+Also in this pass: priority is copied across, and there is a checkbox to always assign to one
+person regardless of who wrote the page — for pages built by a freelancer, or by somebody who has
+since left. Assigning work to someone who is gone is worse than not trying.
+
+### Two more places the documentation is wrong
+
+**`PATCH /v1/tasks/{id}` rejects `workspaceId`**, which it documents as *required*:
+
+```
+name + workspaceId + status  →  400  "property workspaceId should not exist"
+status alone                 →  200
+```
+
+`name` is not required either. That is better than documented: a status change is one request
+sending only the field that changed, so a name we generated can never overwrite a rename made by
+hand in Motion. The original plan had a read-then-write to avoid exactly that; it is unnecessary.
+
+**MarkUp.io stores priority as a number on the root message, not a name on the thread.** Its own
+SDK converts before sending:
+
+```js
+{ critical: 3, high: 3, medium: 2, low: 1 }   // none => 0
+```
+
+**`critical` and `high` are the same number**, so once stored they cannot be told apart. Three is
+therefore mapped to `HIGH` rather than `ASAP` — quietly escalating every "high" comment to the
+most urgent thing in somebody's day is worse than under-calling the rare "critical" one. The
+`mbm_lf_motion_priority_map` filter flips it for sites that disagree.
+
+The reader accepts a number, a name, or an object with a name, on either the thread or its first
+message, because only the numeric-on-message form is confirmed. A string-only reader — which is
+what was written first — would silently never have matched.
+
+Neither `PATCH /api/v2/threads/{id}` nor `POST /api/v2/threads/{id}/priority` exists, so priority
+can only be set in the MarkUp.io interface. We only ever read it, so that costs nothing.
+
+**Still unverified:** the mapping has not seen a real priority, because no comment has one set.
+Set one in MarkUp.io and the next edit to that comment should copy it across.
 
 **M4 — Refinements.** Per-page assignee override, labels, priority, the parked-jobs list with
 retry.

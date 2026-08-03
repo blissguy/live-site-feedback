@@ -250,7 +250,26 @@ class MBM_LF_Motion_Settings {
 					<p class="description">
 						<?php esc_html_e( 'Feedback normally goes to whoever wrote the page, matched by email address. This is who picks it up when that person has no Motion account.', 'mbm-live-feedback' ); ?>
 					</p>
-					<?php $this->render_author_coverage( $workspace ); ?>
+
+					<p style="margin-top:.75rem;">
+						<label>
+							<input
+								type="checkbox"
+								name="motion_always_fallback"
+								value="1"
+								<?php checked( (bool) MBM_LF_Options::get( 'motion_always_fallback' ) ); ?>
+							>
+							<?php esc_html_e( 'Always give feedback to this person', 'mbm-live-feedback' ); ?>
+						</label>
+					</p>
+
+					<p class="description">
+						<?php esc_html_e( 'Tick this and it stops looking at who wrote the page. Useful when pages were built by a freelancer, or by someone who has since left — there is no point assigning work to them.', 'mbm-live-feedback' ); ?>
+					</p>
+
+					<?php if ( ! MBM_LF_Options::get( 'motion_always_fallback' ) ) : ?>
+						<?php $this->render_author_coverage( $workspace ); ?>
+					<?php endif; ?>
 				<?php endif; ?>
 			</td>
 		</tr>
@@ -365,6 +384,7 @@ class MBM_LF_Motion_Settings {
 				'motion_workspace_id'     => $workspace,
 				'motion_project_id'       => $project,
 				'motion_default_assignee' => $assignee,
+				'motion_always_fallback'  => ! empty( $raw['motion_always_fallback'] ),
 			]
 		);
 	}
@@ -391,7 +411,7 @@ class MBM_LF_Motion_Settings {
 		?>
 		<p class="description" style="max-width:44rem;">
 			<strong><?php esc_html_e( 'New comments become tasks in the project above.', 'mbm-live-feedback' ); ?></strong>
-			<?php esc_html_e( 'Each one is given to whoever wrote the page, matched by email address, or to the person you chose when they have no Motion account.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Replies are added to the same task. Marking a comment done moves its task to finished, and reopening it moves it back. A comment’s priority is copied across too.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<p class="description" style="max-width:44rem;">

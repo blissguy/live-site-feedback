@@ -262,6 +262,34 @@ class MBM_LF_Motion_Client {
 	}
 
 	/**
+	 * The status a workspace starts work in.
+	 *
+	 * @param string $workspace_id Workspace id.
+	 * @return string Status name, or an empty string.
+	 */
+	public function default_status( $workspace_id ) {
+		$workspaces = $this->workspaces();
+
+		if ( is_wp_error( $workspaces ) ) {
+			return '';
+		}
+
+		foreach ( $workspaces as $workspace ) {
+			if ( ! isset( $workspace['id'] ) || $workspace['id'] !== $workspace_id ) {
+				continue;
+			}
+
+			foreach ( $this->statuses_of( $workspace ) as $status ) {
+				if ( ! empty( $status['isDefaultStatus'] ) && ! empty( $status['name'] ) ) {
+					return (string) $status['name'];
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
 	 * The statuses belonging to a workspace.
 	 *
 	 * Motion returns these under `taskStatuses`, though the documentation calls
