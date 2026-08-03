@@ -44,6 +44,7 @@ class MBM_LF_Credentials {
 		'webhook_secret'   => 'MBM_LF_WEBHOOK_SECRET',
 		'iss'              => 'MBM_LF_ISS',
 		'aud'              => 'MBM_LF_AUD',
+		'motion_api_key'   => 'MBM_LF_MOTION_API_KEY',
 	];
 
 	/**
@@ -51,7 +52,7 @@ class MBM_LF_Credentials {
 	 *
 	 * @var string[]
 	 */
-	private static $secret_keys = [ 'api_key', 'private_key', 'webhook_secret' ];
+	private static $secret_keys = [ 'api_key', 'private_key', 'webhook_secret', 'motion_api_key' ];
 
 	/**
 	 * Resolve a value. A wp-config.php constant always wins.

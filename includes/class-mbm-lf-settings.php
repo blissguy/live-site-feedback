@@ -154,6 +154,16 @@ class MBM_LF_Settings {
 
 				<?php $this->render_appearance_fields(); ?>
 
+				<?php
+				/**
+				 * Lets an optional module add its own settings.
+				 *
+				 * Used by the Motion integration, which stays out of this class
+				 * entirely and adds nothing at all unless it is configured.
+				 */
+				do_action( 'mbm_lf_settings_sections' );
+				?>
+
 				<?php submit_button( __( 'Save settings', 'mbm-live-feedback' ) ); ?>
 			</form>
 
@@ -939,6 +949,17 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 		}
 
 		MBM_LF_Options::update( $this->sanitize_options( $_POST ) );
+
+		/**
+		 * Lets an optional module save its own settings.
+		 *
+		 * The nonce and capability have already been checked. Raw input is
+		 * passed deliberately — each module knows the shape of its own fields
+		 * and is responsible for validating them.
+		 *
+		 * @param array $raw Raw $_POST.
+		 */
+		do_action( 'mbm_lf_save_settings', $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		wp_safe_redirect(
 			add_query_arg(

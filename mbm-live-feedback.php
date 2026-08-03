@@ -74,6 +74,8 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-admin-bar.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-frontend.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-updater.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-client.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-settings.php';
 
 add_action( 'plugins_loaded', 'mbm_lf_bootstrap' );
 
@@ -103,6 +105,11 @@ function mbm_lf_bootstrap() {
 	if ( is_admin() ) {
 		( new MBM_LF_Settings() )->hooks();
 		( new MBM_LF_Feedback_Screen() )->hooks();
+
+		// The Motion section is the one place the integration shows itself
+		// before it has been connected. Everything else it does stays behind
+		// mbm_lf_motion()->has_key().
+		( new MBM_LF_Motion_Settings() )->hooks();
 
 		return;
 	}
@@ -163,6 +170,21 @@ function mbm_lf_threads() {
 	}
 
 	return $threads;
+}
+
+/**
+ * Shared Motion client instance.
+ *
+ * @return MBM_LF_Motion_Client
+ */
+function mbm_lf_motion() {
+	static $motion = null;
+
+	if ( null === $motion ) {
+		$motion = new MBM_LF_Motion_Client();
+	}
+
+	return $motion;
 }
 
 /**
