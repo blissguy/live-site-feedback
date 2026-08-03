@@ -142,30 +142,23 @@ class MBM_LF_Motion_Client {
 	 * @return array|WP_Error
 	 */
 	public function projects( $workspace_id = '', $force = false ) {
-		$path = '/projects';
-
-		if ( '' !== $workspace_id ) {
-			$path .= '?workspaceId=' . rawurlencode( $workspace_id );
-		}
-
-		$projects = $this->cached_list( self::CACHE_PROJECTS . '_' . md5( $workspace_id ), $path, 'projects', $force );
-
-		if ( is_wp_error( $projects ) || '' === $workspace_id ) {
-			return $projects;
-		}
-
 		/*
-		 * Only the single-project endpoint is clearly documented, so it is not
-		 * certain the list one honours a workspace filter. Filtering again here
-		 * costs nothing and means the picker is right either way.
+		 * Not optional, despite reading that way in the documentation: asking
+		 * without it answers "Validation failed". Refusing here turns a confusing
+		 * API error into something a caller can act on, and spends no request.
 		 */
-		return array_values(
-			array_filter(
-				$projects,
-				static function ( $project ) use ( $workspace_id ) {
-					return ! isset( $project['workspaceId'] ) || $project['workspaceId'] === $workspace_id;
-				}
-			)
+		if ( '' === $workspace_id ) {
+			return new WP_Error(
+				'mbm_lf_motion_no_workspace',
+				__( 'Choose a Motion workspace before picking a project.', 'mbm-live-feedback' )
+			);
+		}
+
+		return $this->cached_list(
+			self::CACHE_PROJECTS . '_' . md5( $workspace_id ),
+			'/projects?workspaceId=' . rawurlencode( $workspace_id ),
+			'projects',
+			$force
 		);
 	}
 
@@ -253,7 +246,7 @@ class MBM_LF_Motion_Client {
 				continue;
 			}
 
-			foreach ( (array) ( $workspace['statuses'] ?? [] ) as $status ) {
+			foreach ( $this->statuses_of( $workspace ) as $status ) {
 				if ( ! empty( $status['isResolvedStatus'] ) && ! empty( $status['name'] ) ) {
 					return (string) $status['name'];
 				}
@@ -261,6 +254,26 @@ class MBM_LF_Motion_Client {
 		}
 
 		return '';
+	}
+
+	/**
+	 * The statuses belonging to a workspace.
+	 *
+	 * Motion returns these under `taskStatuses`, though the documentation calls
+	 * the field `statuses`. Both are accepted so this keeps working whichever
+	 * way that discrepancy is eventually resolved.
+	 *
+	 * @param array $workspace Workspace from the API.
+	 * @return array
+	 */
+	public function statuses_of( array $workspace ) {
+		foreach ( [ 'taskStatuses', 'statuses' ] as $key ) {
+			if ( ! empty( $workspace[ $key ] ) && is_array( $workspace[ $key ] ) ) {
+				return $workspace[ $key ];
+			}
+		}
+
+		return [];
 	}
 
 	/**

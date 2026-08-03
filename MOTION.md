@@ -275,11 +275,33 @@ Each is shippable on its own.
 
 ---
 
-## 11. To confirm before building
+## 11. Answered against the live API
 
-1. **Does `GET /v1/projects` accept `workspaceId` as a filter?** Only the single-project GET was
-   documented clearly. If not, we list and filter client-side, cached — no real difference.
-2. **What does Motion return on 429?** Undocumented: no status code, headers or backoff guidance
-   given. Needs one deliberate test so the queue reacts correctly rather than guessing.
-3. **Does `PATCH /v1/tasks/{id}` accept a status by name or id?** Determines whether the resolved
-   status is resolved once at setup or looked up per call.
+Checked 2026-08-03 against a real account. Two of the three open questions are settled, and a
+third mismatch turned up on the way.
+
+**`GET /v1/projects` requires `workspaceId`.** Not a filter — a requirement. Asking without it
+answers `Validation failed`, despite the documentation reading as though it were optional. The
+client refuses the call outright when no workspace is set, turning a confusing API error into
+something the settings screen can explain. With it, the filter is honoured exactly: 18 projects
+returned, all in the requested workspace.
+
+**Statuses have no IDs, so they are referenced by name.** Each entry is only
+`{ name, isDefaultStatus, isResolvedStatus }`. `POST /v1/tasks` already documents `status` as a
+string, so both creating and updating use the name. Nothing needs resolving per call — read it
+once from the workspace and keep it.
+
+**The field is `taskStatuses`, not `statuses`.** The documentation says `statuses`; the live API
+returns `taskStatuses`. This silently broke resolved-status detection until it was checked
+against a real response — the lookup was reading a key that never exists. The client now accepts
+either, so it keeps working whichever way Motion settles it. Add to `UPSTREAM.md` if it persists.
+
+Confirmed working: `isResolvedStatus` marks **Completed** in every workspace on the account, so
+"mark it done" resolves correctly without hardcoding a name — including in workspaces with custom
+statuses like *Needs Design*, *Needs Dev* and *Needs Reviewed*.
+
+### Still open
+
+**What does Motion return on 429?** Still undocumented, and not worth provoking until the queue
+exists to receive the answer. The client already captures a `Retry-After` header if one arrives.
+Test deliberately during M1.
