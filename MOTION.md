@@ -293,7 +293,34 @@ Status is deliberately omitted from the request, so Motion applies the workspace
 (**Todo**). Worth revisiting for a workspace with *Needs Design* / *Needs Dev*, but that is a
 setting, not a default.
 
-**M2 — Replies become comments.** `add_comment`, keyed off the existing mapping.
+**M2 — Replies become comments.** ✅ Built 2026-08-03.
+
+**The reply text is not read from the delivery.** Deliveries are unsigned, they repeat, and they
+can arrive out of order, so the job records only which thread changed and fetches the messages
+from MarkUp.io when it runs. A MarkUp read costs nothing worth counting — a thousand a minute
+against Motion's hundred and twenty — and it is the authoritative copy rather than a snapshot
+from an unauthenticated POST.
+
+The worker walks a thread's messages backwards looking for the first it has not already posted,
+so a burst of replies is handled one at a time instead of only ever seeing the newest. Message
+ids posted are remembered per thread, capped at the last 50, so a repeated delivery cannot repeat
+a comment.
+
+The link store changed shape to hold them — `[ 'task' => id, 'seen' => [...] ]` — and still reads
+the bare string M1 wrote. An upgrade that orphaned existing tasks would start creating duplicates
+for every thread already sent.
+
+Verified:
+
+| Case | Result |
+| --- | --- |
+| Reply arrives before its task exists | Kept for retry: *"Waiting for this page's task to be created first."* Not lost, not duplicated |
+| Thread has no replies | Finishes quietly, spends no request |
+| Motion's comment endpoint with our Markdown | Posted; renders as bold attribution over a blockquote |
+| M1's bare-string link after the shape change | Still resolves to the right task |
+
+Untested from here: MarkUp.io actually returning a reply, since no thread on the test site has
+one yet. Needs a real reply left on the site.
 
 **M3 — Resolving closes the task.** Look up `isResolvedStatus` for the workspace and `PATCH`.
 

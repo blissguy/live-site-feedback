@@ -71,9 +71,28 @@ class MBM_LF_Motion_Tasks {
 			return;
 		}
 
+		if ( 'comment_reply_created' === $type ) {
+			/*
+			 * The reply itself is not read from the delivery. Deliveries are
+			 * unsigned, they repeat, and they can arrive out of order, so the
+			 * text is fetched from MarkUp.io when the job runs. A MarkUp read
+			 * costs nothing worth counting — a thousand a minute against
+			 * Motion's hundred and twenty — and it is the authoritative copy.
+			 */
+			MBM_LF_Motion_Queue::add(
+				'add_comment',
+				$thread_id,
+				[
+					'markup_id' => (string) ( $body['data']['markup']['id'] ?? '' ),
+				]
+			);
+
+			return;
+		}
+
 		if ( 'comment_created' !== $type ) {
-			// Replies and resolving arrive in M2 and M3. Ignoring them now is
-			// better than queueing work nothing knows how to do.
+			// Resolving arrives in M3. Ignoring it now is better than queueing
+			// work nothing knows how to do.
 			return;
 		}
 
@@ -175,21 +194,27 @@ class MBM_LF_Motion_Tasks {
 			return;
 		}
 
-		if ( 'create_task' !== $job['action'] ) {
-			MBM_LF_Motion_Queue::fail(
-				$job,
-				sprintf(
-					/* translators: %s: the job type. */
-					__( 'Nothing here knows how to do "%s" yet.', 'mbm-live-feedback' ),
-					$job['action']
-				),
-				true
-			);
+		if ( 'create_task' === $job['action'] ) {
+			$this->create_task( $job, $payload );
 
 			return;
 		}
 
-		$this->create_task( $job, $payload );
+		if ( 'add_comment' === $job['action'] ) {
+			$this->add_comment( $job, $payload );
+
+			return;
+		}
+
+		MBM_LF_Motion_Queue::fail(
+			$job,
+			sprintf(
+				/* translators: %s: the job type. */
+				__( 'Nothing here knows how to do "%s" yet.', 'mbm-live-feedback' ),
+				$job['action']
+			),
+			true
+		);
 	}
 
 	/**
@@ -251,6 +276,156 @@ class MBM_LF_Motion_Tasks {
 		$this->link( $thread_id, (string) $result['id'] );
 
 		MBM_LF_Motion_Queue::complete( $job['id'] );
+	}
+
+	/**
+	 * Put a reply on the task as a comment.
+	 *
+	 * @param array $job     Queue row.
+	 * @param array $payload Job payload.
+	 */
+	private function add_comment( array $job, array $payload ) {
+		$thread_id = (string) $job['thread_id'];
+		$task_id   = $this->task_for_thread( $thread_id );
+
+		if ( '' === $task_id ) {
+			/*
+			 * The task is not there yet. Usually that means the job creating it
+			 * is still in the queue ahead of this one, so retrying shortly is
+			 * right. If that job has parked, this will eventually park too, with
+			 * a message that explains why.
+			 */
+			MBM_LF_Motion_Queue::fail(
+				$job,
+				__( 'Waiting for this page\'s task to be created first.', 'mbm-live-feedback' )
+			);
+
+			return;
+		}
+
+		$reply = $this->latest_reply( $thread_id );
+
+		if ( is_wp_error( $reply ) ) {
+			MBM_LF_Motion_Queue::fail( $job, $reply->get_error_message() );
+
+			return;
+		}
+
+		if ( ! $reply ) {
+			// Nothing new to say. Not a failure — the reply may have been
+			// deleted between the delivery and now.
+			MBM_LF_Motion_Queue::complete( $job['id'] );
+
+			return;
+		}
+
+		// A repeated delivery must not repeat the comment.
+		if ( $this->message_seen( $thread_id, $reply['id'] ) ) {
+			MBM_LF_Motion_Queue::complete( $job['id'] );
+
+			return;
+		}
+
+		MBM_LF_Motion_Queue::spend();
+
+		$result = mbm_lf_motion()->request(
+			'POST',
+			'/comments',
+			[
+				'taskId'  => $task_id,
+				'content' => $this->comment_markdown( $reply ),
+			]
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$this->handle_error( $job, $result );
+
+			return;
+		}
+
+		$this->mark_message_seen( $thread_id, $reply['id'] );
+
+		MBM_LF_Motion_Queue::complete( $job['id'] );
+	}
+
+	/**
+	 * The newest reply on a thread, read from MarkUp.io.
+	 *
+	 * The first message is the comment itself, which is already the task, so
+	 * only what came after it counts as a reply.
+	 *
+	 * @param string $thread_id MarkUp thread id.
+	 * @return array|false|WP_Error Reply with id, text and author.
+	 */
+	private function latest_reply( $thread_id ) {
+		$thread = mbm_lf_api()->request( 'GET', '/api/v2/threads/' . rawurlencode( $thread_id ) );
+
+		if ( is_wp_error( $thread ) ) {
+			return $thread;
+		}
+
+		$messages = isset( $thread['messages'] ) && is_array( $thread['messages'] ) ? $thread['messages'] : [];
+
+		if ( count( $messages ) < 2 ) {
+			return false;
+		}
+
+		// Work backwards, so a burst of replies still finds one we have not
+		// posted rather than stopping at the newest every time.
+		for ( $i = count( $messages ) - 1; $i >= 1; $i-- ) {
+			$message = $messages[ $i ];
+
+			if ( empty( $message['id'] ) || $this->message_seen( $thread_id, $message['id'] ) ) {
+				continue;
+			}
+
+			$text = '';
+
+			foreach ( [ 'message', 'content', 'text' ] as $field ) {
+				if ( ! empty( $message[ $field ] ) && is_string( $message[ $field ] ) ) {
+					$text = $message[ $field ];
+					break;
+				}
+			}
+
+			return [
+				'id'     => (string) $message['id'],
+				'text'   => $text,
+				'author' => (string) ( $message['user']['name'] ?? '' ),
+			];
+		}
+
+		return false;
+	}
+
+	/**
+	 * A reply, as Markdown for Motion.
+	 *
+	 * @param array $reply Reply details.
+	 * @return string
+	 */
+	private function comment_markdown( array $reply ) {
+		$lines = [];
+		$text  = trim( wp_strip_all_tags( (string) $reply['text'] ) );
+
+		if ( '' === $text ) {
+			$text = __( '(no text)', 'mbm-live-feedback' );
+		}
+
+		if ( '' !== $reply['author'] ) {
+			$lines[] = sprintf(
+				/* translators: %s: person's name. */
+				__( '**%s** replied on the site:', 'mbm-live-feedback' ),
+				$reply['author']
+			);
+			$lines[] = '';
+		}
+
+		foreach ( preg_split( '/\r\n|\r|\n/', $text ) as $line ) {
+			$lines[] = '> ' . $line;
+		}
+
+		return implode( "\n", $lines );
 	}
 
 	/**
@@ -442,15 +617,95 @@ class MBM_LF_Motion_Tasks {
 	 * ------------------------------------------------------------------ */
 
 	/**
+	 * Everything we remember about the threads we have sent.
+	 *
+	 * Each entry is `[ 'task' => id, 'seen' => [ message ids ] ]`. Earlier
+	 * versions stored the task id as a bare string, so that shape is still
+	 * understood — an upgrade must not orphan tasks and start making duplicates.
+	 *
+	 * @return array
+	 */
+	private function links() {
+		$links = get_option( self::LINKS, [] );
+
+		return is_array( $links ) ? $links : [];
+	}
+
+	/**
+	 * Normalise one entry, whichever shape it was stored in.
+	 *
+	 * @param mixed $entry Stored value.
+	 * @return array{task:string,seen:string[]}
+	 */
+	private function entry( $entry ) {
+		if ( is_string( $entry ) ) {
+			return [
+				'task' => $entry,
+				'seen' => [],
+			];
+		}
+
+		if ( ! is_array( $entry ) ) {
+			return [
+				'task' => '',
+				'seen' => [],
+			];
+		}
+
+		return [
+			'task' => isset( $entry['task'] ) ? (string) $entry['task'] : '',
+			'seen' => isset( $entry['seen'] ) && is_array( $entry['seen'] ) ? $entry['seen'] : [],
+		];
+	}
+
+	/**
 	 * The Motion task made for a thread, if there is one.
 	 *
 	 * @param string $thread_id MarkUp thread id.
 	 * @return string
 	 */
 	public function task_for_thread( $thread_id ) {
-		$links = get_option( self::LINKS, [] );
+		$links = $this->links();
 
-		return is_array( $links ) && isset( $links[ $thread_id ] ) ? (string) $links[ $thread_id ] : '';
+		return isset( $links[ $thread_id ] ) ? $this->entry( $links[ $thread_id ] )['task'] : '';
+	}
+
+	/**
+	 * Whether a reply has already been posted to Motion.
+	 *
+	 * @param string $thread_id  MarkUp thread id.
+	 * @param string $message_id MarkUp message id.
+	 * @return bool
+	 */
+	private function message_seen( $thread_id, $message_id ) {
+		$links = $this->links();
+
+		if ( ! isset( $links[ $thread_id ] ) ) {
+			return false;
+		}
+
+		return in_array( (string) $message_id, $this->entry( $links[ $thread_id ] )['seen'], true );
+	}
+
+	/**
+	 * Note that a reply has been posted.
+	 *
+	 * @param string $thread_id  MarkUp thread id.
+	 * @param string $message_id MarkUp message id.
+	 */
+	private function mark_message_seen( $thread_id, $message_id ) {
+		$links = $this->links();
+		$entry = $this->entry( $links[ $thread_id ] ?? [] );
+
+		$entry['seen'][] = (string) $message_id;
+
+		// Only ever compared against, so keeping every id forever would be
+		// storing history nobody reads.
+		$entry['seen'] = array_slice( array_unique( $entry['seen'] ), -50 );
+
+		$links[ $thread_id ] = $entry;
+
+		update_option( self::LINKS, $links, false );
 	}
 
 	/**
@@ -460,13 +715,11 @@ class MBM_LF_Motion_Tasks {
 	 * @param string $task_id   Motion task id.
 	 */
 	private function link( $thread_id, $task_id ) {
-		$links = get_option( self::LINKS, [] );
+		$links = $this->links();
+		$entry = $this->entry( $links[ $thread_id ] ?? [] );
 
-		if ( ! is_array( $links ) ) {
-			$links = [];
-		}
-
-		$links[ $thread_id ] = $task_id;
+		$entry['task']       = $task_id;
+		$links[ $thread_id ] = $entry;
 
 		update_option( self::LINKS, $links, false );
 	}
