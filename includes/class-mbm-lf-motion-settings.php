@@ -26,6 +26,7 @@ class MBM_LF_Motion_Settings {
 		add_action( 'mbm_lf_save_settings', [ $this, 'save' ] );
 		add_action( 'wp_ajax_mbm_lf_motion_test', [ $this, 'ajax_test' ] );
 		add_action( 'admin_post_mbm_lf_motion_refresh', [ $this, 'handle_refresh' ] );
+		add_action( 'admin_post_mbm_lf_motion_retry', [ $this, 'handle_retry' ] );
 	}
 
 	/**
@@ -80,9 +81,7 @@ class MBM_LF_Motion_Settings {
 				</a>
 			</p>
 
-			<p class="description" style="max-width:44rem;">
-				<?php esc_html_e( 'Nothing is sent to Motion yet — this is the connection only. Creating tasks comes next.', 'mbm-live-feedback' ); ?>
-			</p>
+			<?php $this->render_queue(); ?>
 
 			<?php $this->render_script(); ?>
 		<?php else : ?>
@@ -368,6 +367,104 @@ class MBM_LF_Motion_Settings {
 				'motion_default_assignee' => $assignee,
 			]
 		);
+	}
+
+	/**
+	 * Say what the queue is doing.
+	 *
+	 * Work that happens on a schedule is invisible unless something says so,
+	 * and silently parked jobs are just data loss with extra steps.
+	 */
+	private function render_queue() {
+		$ready = ( new MBM_LF_Motion_Tasks() )->is_ready();
+
+		if ( ! $ready ) {
+			?>
+			<p class="description" style="max-width:44rem;color:#996800;">
+				<?php esc_html_e( 'Choose a workspace and a project above and new comments will start becoming tasks.', 'mbm-live-feedback' ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		$stats = MBM_LF_Motion_Queue::stats();
+		?>
+		<p class="description" style="max-width:44rem;">
+			<strong><?php esc_html_e( 'New comments become tasks in the project above.', 'mbm-live-feedback' ); ?></strong>
+			<?php esc_html_e( 'Each one is given to whoever wrote the page, matched by email address, or to the person you chose when they have no Motion account.', 'mbm-live-feedback' ); ?>
+		</p>
+
+		<p class="description" style="max-width:44rem;">
+			<?php
+			if ( $stats['pending'] > 0 ) {
+				printf(
+					/* translators: %s: number of items. */
+					esc_html( _n( '%s comment is waiting to be sent.', '%s comments are waiting to be sent.', $stats['pending'], 'mbm-live-feedback' ) ),
+					esc_html( number_format_i18n( $stats['pending'] ) )
+				);
+			} else {
+				esc_html_e( 'Nothing is waiting to be sent.', 'mbm-live-feedback' );
+			}
+			?>
+		</p>
+
+		<?php if ( $stats['parked'] > 0 ) : ?>
+			<div class="notice notice-warning inline" style="max-width:44rem;margin:.5rem 0;">
+				<p>
+					<?php
+					printf(
+						/* translators: %s: number of items. */
+						esc_html( _n( '%s comment could not be sent to Motion.', '%s comments could not be sent to Motion.', $stats['parked'], 'mbm-live-feedback' ) ),
+						esc_html( number_format_i18n( $stats['parked'] ) )
+					);
+					?>
+				</p>
+
+				<?php foreach ( $stats['errors'] as $error ) : ?>
+					<p><code><?php echo esc_html( $error ); ?></code></p>
+				<?php endforeach; ?>
+
+				<p>
+					<a
+						href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_retry' ), 'mbm_lf_motion_retry' ) ); ?>"
+						class="button button-secondary"
+					>
+						<?php esc_html_e( 'Try sending them again', 'mbm-live-feedback' ); ?>
+					</a>
+				</p>
+			</div>
+		<?php endif; ?>
+
+		<?php if ( ! defined( 'DISABLE_WP_CRON' ) || ! DISABLE_WP_CRON ) : ?>
+			<p class="description" style="max-width:44rem;">
+				<?php esc_html_e( 'Sending happens in the background, shortly after a comment arrives. On a quiet site that waits for the next visitor, so a real server cron makes it prompt.', 'mbm-live-feedback' ); ?>
+			</p>
+		<?php endif; ?>
+		<?php
+	}
+
+	/**
+	 * Put failed jobs back in the queue.
+	 */
+	public function handle_retry() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
+		}
+
+		check_admin_referer( 'mbm_lf_motion_retry' );
+
+		MBM_LF_Motion_Queue::retry_parked();
+
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => MBM_LF_Settings::PAGE,
+					'mbm_lf_notice' => 'motion-retrying',
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
 	}
 
 	/**

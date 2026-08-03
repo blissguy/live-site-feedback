@@ -20,6 +20,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-markups.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-updater.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-threads.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-motion-client.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-motion-queue.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-motion-tasks.php';
 
 /*
  * Tell MarkUp.io to stop notifying this site before the credentials go.
@@ -55,6 +57,9 @@ delete_transient( MBM_LF_Threads::CACHE_KEY );
 wp_clear_scheduled_hook( 'mbm_lf_refresh_feedback' );
 
 ( new MBM_LF_Motion_Client() )->flush_caches();
+
+MBM_LF_Motion_Queue::drop();
+delete_option( MBM_LF_Motion_Tasks::LINKS );
 
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_MARKUP_ID );
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_DISABLED );

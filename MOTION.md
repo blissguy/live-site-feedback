@@ -261,8 +261,37 @@ gets no table, no cron event and no code path.
 email map with caching. Nothing is created yet. Ends with: the settings screen can prove it is
 talking to the right Motion workspace.
 
-**M1 — Threads become tasks.** The queue table, the cron worker, the token bucket, the
-thread→task mapping, and `create_task`. The first genuinely useful milestone.
+**M1 — Threads become tasks.** ✅ Built and verified against the live account 2026-08-03.
+
+Queue table, cron worker, token bucket, thread→task mapping and `create_task`. Verified by
+feeding the worker a delivery shaped like a real one:
+
+```
+Home — "The hero heading wraps awkwardly on tablet — can we tighten…"
+  project    Motion + Markup + WP Plugin Dev Test Project
+  workspace  Web Design + Dev
+  status     Todo
+  assignee   Emmanuel Kuebu
+```
+
+Description carried the quoted comment, the author, the page, the pin number and the MarkUp deep
+link. Queue drained clean, budget went 96 → 95.
+
+**Duplicates are guarded twice**, and both were tested:
+
+| Situation | Result |
+| --- | --- |
+| Same delivery repeated after the first was processed | Job runs, sees the existing link, finishes without creating a second task |
+| Two identical deliveries before the worker runs | Only one job is queued |
+| An event M2/M3 will handle (`comment_resolved`) | Queues nothing rather than work nothing understands |
+
+The assignee arrived via the fallback, which is correct here: the local admin address has no
+Motion account, so it used the person named in settings. The author-match path needs staging,
+where the addresses actually line up.
+
+Status is deliberately omitted from the request, so Motion applies the workspace default
+(**Todo**). Worth revisiting for a workspace with *Needs Design* / *Needs Dev*, but that is a
+setting, not a default.
 
 **M2 — Replies become comments.** `add_comment`, keyed off the existing mapping.
 
@@ -302,6 +331,14 @@ statuses like *Needs Design*, *Needs Dev* and *Needs Reviewed*.
 
 ### Still open
 
-**What does Motion return on 429?** Still undocumented, and not worth provoking until the queue
-exists to receive the answer. The client already captures a `Retry-After` header if one arrives.
-Test deliberately during M1.
+**What does Motion return on 429?** Still unverified, and deliberately so. Provoking it means
+deliberately exhausting the account's minute — which is exactly what §5 promises the plugin will
+never do to a colleague's work. Not a reasonable thing to do to a shared team account to satisfy
+curiosity.
+
+The code is written to survive it regardless: a 429 defers the job **without counting an
+attempt**, honours a `Retry-After` header if one arrives, falls back to a minute if not, and
+marks the whole minute as spent so nothing else goes out meanwhile. That is the correct
+behaviour whatever the response body turns out to look like.
+
+Worth confirming during a genuinely quiet period, or by asking Motion directly.

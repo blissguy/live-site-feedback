@@ -76,6 +76,8 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-updater.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-client.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-settings.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-queue.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-tasks.php';
 
 add_action( 'plugins_loaded', 'mbm_lf_bootstrap' );
 
@@ -97,6 +99,19 @@ function mbm_lf_bootstrap() {
 	// The toolbar shows on the front end as well, so this cannot live behind the
 	// is_admin() check below.
 	( new MBM_LF_Admin_Bar() )->hooks();
+
+	/*
+	 * Motion only wires itself in once a key exists. Without one there is no
+	 * queue, no scheduled work and no table — someone not using Motion carries
+	 * none of it.
+	 */
+	if ( mbm_lf_motion()->has_key() ) {
+		( new MBM_LF_Motion_Tasks() )->hooks();
+
+		if ( is_admin() ) {
+			MBM_LF_Motion_Queue::maybe_upgrade();
+		}
+	}
 
 	// Refreshing the summary happens on a scheduled event, away from anyone's
 	// page load, so it has to be registered everywhere too.

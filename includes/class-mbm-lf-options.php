@@ -54,6 +54,7 @@ class MBM_LF_Options {
 			'motion_workspace_id' => '',
 			'motion_project_id' => '',
 			'motion_default_assignee' => '',
+			'motion_rate_limit' => 120,
 		];
 	}
 

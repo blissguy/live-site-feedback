@@ -1212,6 +1212,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			'update-none'      => [ 'success', __( 'You are running the latest version.', 'mbm-live-feedback' ) ],
 			'update-failed'    => [ 'error', __( 'Could not reach the update server. Check back shortly.', 'mbm-live-feedback' ) ],
 			'motion-refreshed' => [ 'success', __( 'Fetched your workspaces, projects and people from Motion again.', 'mbm-live-feedback' ) ],
+			'motion-retrying'  => [ 'success', __( 'Those comments are queued to go to Motion again.', 'mbm-live-feedback' ) ],
 		];
 
 		if ( ! isset( $notices[ $notice ] ) ) {
