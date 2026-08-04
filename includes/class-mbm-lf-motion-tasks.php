@@ -282,6 +282,12 @@ class MBM_LF_Motion_Tasks {
 			$body['priority'] = $priority;
 		}
 
+		$status = $this->starting_status();
+
+		if ( '' !== $status ) {
+			$body['status'] = $status;
+		}
+
 		/**
 		 * Filters the task about to be created in Motion.
 		 *
@@ -489,9 +495,14 @@ class MBM_LF_Motion_Tasks {
 
 		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
 
+		/*
+		 * Reopening returns a task to wherever new feedback starts, not to the
+		 * workspace default. On a board whose work begins at "Needs Dev", being
+		 * dropped back to "Todo" would be wrong.
+		 */
 		$status = $resolved
 			? mbm_lf_motion()->resolved_status( $workspace )
-			: mbm_lf_motion()->default_status( $workspace );
+			: $this->starting_status( true );
 
 		if ( '' === $status ) {
 			MBM_LF_Motion_Queue::fail(
@@ -560,6 +571,28 @@ class MBM_LF_Motion_Tasks {
 		}
 
 		MBM_LF_Motion_Queue::complete( $job['id'] );
+	}
+
+	/**
+	 * The status a new or reopened task should be in.
+	 *
+	 * Empty means "say nothing and let Motion apply the workspace default",
+	 * which is the right thing when creating. Reopening has to name a status
+	 * explicitly, so it falls back to the workspace default itself.
+	 *
+	 * @param bool $must_resolve Return the workspace default rather than nothing.
+	 * @return string
+	 */
+	private function starting_status( $must_resolve = false ) {
+		$chosen = (string) MBM_LF_Options::get( 'motion_new_status' );
+
+		if ( '' !== $chosen ) {
+			return $chosen;
+		}
+
+		return $must_resolve
+			? mbm_lf_motion()->default_status( (string) MBM_LF_Options::get( 'motion_workspace_id' ) )
+			: '';
 	}
 
 	/**

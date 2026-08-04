@@ -342,8 +342,8 @@ indistinguishable from real data is worse than no test.
 **M3 — Resolving closes the task.** ✅ Built and verified 2026-08-03.
 
 Resolving a comment moves its task to the workspace's resolved status; reopening moves it back to
-the default. Verified against the real task: **Todo → Completed → Todo**, with the task name
-untouched throughout.
+where new feedback starts. Verified against the real task: **Todo → Completed → Todo**, with the
+task name untouched throughout.
 
 Also in this pass: priority is copied across, and there is a checkbox to always assign to one
 person regardless of who wrote the page — for pages built by a freelancer, or by somebody who has
@@ -381,13 +381,33 @@ what was written first — would silently never have matched.
 Neither `PATCH /api/v2/threads/{id}` nor `POST /api/v2/threads/{id}/priority` exists, so priority
 can only be set in the MarkUp.io interface. We only ever read it, so that costs nothing.
 
-**Still unverified:** the mapping has not seen a real priority, because no comment has one set.
-Set one in MarkUp.io and the next edit to that comment should copy it across.
+Verified 2026-08-03 with a real comment set to **high** in MarkUp.io: the task came through as
+`HIGH`. The numeric-on-message form is the one that occurs in practice.
 
-**M4 — Refinements.** Per-page assignee override, labels, priority, the parked-jobs list with
-retry.
+**M4 — Refinements.** ◑ In progress.
 
-Each is shippable on its own.
+**The status new feedback starts in is now a setting.** Motion applies the workspace default —
+`Todo` here — to anything created without a status, which is not where most boards actually pick
+work up. A dropdown of the workspace's own statuses now decides, defaulting to whatever Motion
+would have done.
+
+Two things this had to get right:
+
+- **Reopening uses the same status.** A board whose work begins at `Needs Dev` should not have
+  reopened comments land in `Todo`, so both paths ask one method. Creating sends nothing when the
+  setting is empty and lets Motion decide; reopening has to name a status, so it resolves the
+  workspace default itself.
+- **The stored value is checked against the live status list on save.** A name Motion does not know
+  fails *every* task creation, and it fails at drain time — long after the settings page said
+  "saved". Verified: an unknown status is a **404 `Unknown Status: …`**, not a silently ignored
+  field. `Completed` is left out of the dropdown; starting a piece of feedback already finished is
+  never what anybody means, and resolution owns that status.
+
+Verified end to end against the live workspace: `status: "Needs Dev"` → **201**, task returns
+`Needs Dev`. Both probe tasks were deleted afterwards.
+
+Still to do in M4: per-page assignee override, labels, the parked-jobs list with retry. Each is
+shippable on its own.
 
 ---
 

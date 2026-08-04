@@ -55,6 +55,7 @@ class MBM_LF_Motion_Settings {
 			<?php if ( $connected ) : ?>
 				<?php $this->workspace_row(); ?>
 				<?php $this->project_row(); ?>
+				<?php $this->status_row(); ?>
 				<?php $this->assignee_row(); ?>
 			<?php endif; ?>
 			</tbody>
@@ -219,6 +220,65 @@ class MBM_LF_Motion_Settings {
 	}
 
 	/**
+	 * Starting-status picker.
+	 */
+	private function status_row() {
+		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
+
+		if ( '' === $workspace ) {
+			return;
+		}
+
+		$current  = (string) MBM_LF_Options::get( 'motion_new_status' );
+		$statuses = mbm_lf_motion()->statuses( $workspace );
+		$resolved = mbm_lf_motion()->resolved_status( $workspace );
+		$default  = mbm_lf_motion()->default_status( $workspace );
+
+		if ( empty( $statuses ) ) {
+			return;
+		}
+		?>
+		<tr>
+			<th scope="row">
+				<label for="mbm-lf-motion-status"><?php esc_html_e( 'New tasks start as', 'mbm-live-feedback' ); ?></label>
+			</th>
+			<td>
+				<select id="mbm-lf-motion-status" name="motion_new_status">
+					<option value="">
+						<?php
+						if ( '' !== $default ) {
+							/* translators: %s: name of the workspace's default status, e.g. Todo. */
+							printf( esc_html__( 'Whatever Motion normally uses (%s)', 'mbm-live-feedback' ), esc_html( $default ) );
+						} else {
+							esc_html_e( 'Whatever Motion normally uses', 'mbm-live-feedback' );
+						}
+						?>
+					</option>
+					<?php
+					foreach ( $statuses as $status ) {
+						$name = (string) ( $status['name'] ?? '' );
+
+						// Resolving a comment owns this one; starting there would mean arriving finished.
+						if ( '' === $name || $name === $resolved ) {
+							continue;
+						}
+						?>
+						<option value="<?php echo esc_attr( $name ); ?>" <?php selected( $current, $name ); ?>>
+							<?php echo esc_html( $name ); ?>
+						</option>
+						<?php
+					}
+					?>
+				</select>
+				<p class="description">
+					<?php esc_html_e( 'The status every new piece of feedback arrives in — pick the column your team actually picks work up from. Reopening a resolved comment sends its task back here too.', 'mbm-live-feedback' ); ?>
+				</p>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
 	 * Fallback assignee picker.
 	 */
 	private function assignee_row() {
@@ -371,12 +431,20 @@ class MBM_LF_Motion_Settings {
 		$previous  = (string) MBM_LF_Options::get( 'motion_workspace_id' );
 		$project   = isset( $raw['motion_project_id'] ) ? sanitize_text_field( wp_unslash( $raw['motion_project_id'] ) ) : '';
 		$assignee  = isset( $raw['motion_default_assignee'] ) ? sanitize_text_field( wp_unslash( $raw['motion_default_assignee'] ) ) : '';
+		$status    = isset( $raw['motion_new_status'] ) ? sanitize_text_field( wp_unslash( $raw['motion_new_status'] ) ) : '';
 
-		// A project or person from the old workspace means nothing in the new
-		// one, so drop them rather than storing something that cannot work.
+		// A project, person or status from the old workspace means nothing in the
+		// new one, so drop them rather than storing something that cannot work.
 		if ( '' !== $previous && $workspace !== $previous ) {
 			$project  = '';
 			$assignee = '';
+			$status   = '';
+		}
+
+		// A status Motion does not recognise makes every task creation fail, so
+		// only store one the workspace actually offers.
+		if ( '' !== $status && ! $this->status_exists( $workspace, $status ) ) {
+			$status = '';
 		}
 
 		MBM_LF_Options::update(
@@ -385,8 +453,26 @@ class MBM_LF_Motion_Settings {
 				'motion_project_id'       => $project,
 				'motion_default_assignee' => $assignee,
 				'motion_always_fallback'  => ! empty( $raw['motion_always_fallback'] ),
+				'motion_new_status'       => $status,
 			]
 		);
+	}
+
+	/**
+	 * Whether a workspace offers a status by that name.
+	 *
+	 * @param string $workspace_id Workspace id.
+	 * @param string $status       Status name.
+	 * @return bool
+	 */
+	private function status_exists( $workspace_id, $status ) {
+		foreach ( mbm_lf_motion()->statuses( $workspace_id ) as $candidate ) {
+			if ( isset( $candidate['name'] ) && $candidate['name'] === $status ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

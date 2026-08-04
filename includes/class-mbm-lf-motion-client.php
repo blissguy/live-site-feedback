@@ -262,6 +262,28 @@ class MBM_LF_Motion_Client {
 	}
 
 	/**
+	 * Every status a workspace offers.
+	 *
+	 * @param string $workspace_id Workspace id.
+	 * @return array
+	 */
+	public function statuses( $workspace_id ) {
+		$workspaces = $this->workspaces();
+
+		if ( is_wp_error( $workspaces ) ) {
+			return [];
+		}
+
+		foreach ( $workspaces as $workspace ) {
+			if ( isset( $workspace['id'] ) && $workspace['id'] === $workspace_id ) {
+				return $this->statuses_of( $workspace );
+			}
+		}
+
+		return [];
+	}
+
+	/**
 	 * The status a workspace starts work in.
 	 *
 	 * @param string $workspace_id Workspace id.

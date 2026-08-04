@@ -56,6 +56,7 @@ class MBM_LF_Options {
 			'motion_default_assignee' => '',
 			'motion_rate_limit' => 120,
 			'motion_always_fallback' => false,
+			'motion_new_status' => '',
 		];
 	}
 
