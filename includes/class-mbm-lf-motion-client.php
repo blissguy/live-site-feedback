@@ -262,6 +262,43 @@ class MBM_LF_Motion_Client {
 	}
 
 	/**
+	 * Every label a workspace offers.
+	 *
+	 * Labels arrive on the workspace itself as plain strings — there is no
+	 * /labels endpoint, `GET /v1/labels` is a 404.
+	 *
+	 * @param string $workspace_id Workspace id.
+	 * @return string[]
+	 */
+	public function labels( $workspace_id ) {
+		$workspaces = $this->workspaces();
+
+		if ( is_wp_error( $workspaces ) ) {
+			return [];
+		}
+
+		foreach ( $workspaces as $workspace ) {
+			if ( isset( $workspace['id'] ) && $workspace['id'] === $workspace_id ) {
+				$labels = [];
+
+				foreach ( (array) ( $workspace['labels'] ?? [] ) as $label ) {
+					// Strings today, but an object with a name would be the
+					// obvious way for this to change.
+					$name = is_array( $label ) ? (string) ( $label['name'] ?? '' ) : (string) $label;
+
+					if ( '' !== $name ) {
+						$labels[] = $name;
+					}
+				}
+
+				return $labels;
+			}
+		}
+
+		return [];
+	}
+
+	/**
 	 * Every status a workspace offers.
 	 *
 	 * @param string $workspace_id Workspace id.

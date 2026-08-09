@@ -1213,6 +1213,8 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			'update-failed'    => [ 'error', __( 'Could not reach the update server. Check back shortly.', 'mbm-live-feedback' ) ],
 			'motion-refreshed' => [ 'success', __( 'Fetched your workspaces, projects and people from Motion again.', 'mbm-live-feedback' ) ],
 			'motion-retrying'  => [ 'success', __( 'Those comments are queued to go to Motion again.', 'mbm-live-feedback' ) ],
+			'motion-retried-one' => [ 'success', __( 'That comment is queued to go to Motion again.', 'mbm-live-feedback' ) ],
+			'motion-forgotten' => [ 'success', __( 'That one has been dropped. It will not be sent to Motion.', 'mbm-live-feedback' ) ],
 		];
 
 		if ( ! isset( $notices[ $notice ] ) ) {

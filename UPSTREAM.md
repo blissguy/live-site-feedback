@@ -182,6 +182,11 @@ Not bugs — just things worth knowing that the documentation does not mention.
 - **Undocumented endpoints** the SDK uses: `/auth/sdk-exchange` and `/auth/sdk-exchange/result`
   (the sign-in polling pair), and `POST /markups/:id/read-only`.
 - **An extra event** exists in the SDK types but not the docs: `comment:reply:delete`.
+- **Motion labels arrive on the workspace**, as a flat array of strings under `labels`. There is no
+  labels endpoint — `GET /v1/labels` is a 404. `POST /v1/tasks` takes them as plain strings and
+  returns them as objects (`[{"name":"In Dev"}]`), and an unknown one is a **404 `Unknown workspace
+  label: …`**, exactly like an unknown status. The reader accepts strings or objects, since an
+  object with a name is the obvious way for that to change.
 - **`POST /v1/tasks` accepts a `status`**, which its documented field list omits. It is matched
   against the workspace's status names and a wrong one is a **404 `Unknown Status: …`** — loud,
   which is what we want, since the plugin stores the name and only finds out at drain time. An

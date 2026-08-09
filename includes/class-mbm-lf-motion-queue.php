@@ -286,6 +286,77 @@ class MBM_LF_Motion_Queue {
 	 *
 	 * @return int How many were released.
 	 */
+	/**
+	 * The jobs that have given up, newest first.
+	 *
+	 * A count alone says something is wrong without saying what, which leaves
+	 * the only remedy as retrying everything and hoping.
+	 *
+	 * @param int $limit How many at most.
+	 * @return array[]
+	 */
+	public static function parked( $limit = 50 ) {
+		global $wpdb;
+
+		if ( (int) get_option( self::SCHEMA_OPTION ) !== self::SCHEMA_VERSION ) {
+			return [];
+		}
+
+		return (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare(
+				'SELECT id, action, thread_id, attempts, last_error, payload, available_at FROM ' . self::table() . " WHERE status = 'parked' ORDER BY id DESC LIMIT %d",
+				max( 1, (int) $limit )
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Put one parked job back in the queue.
+	 *
+	 * @param int $id Job id.
+	 * @return bool Whether anything changed.
+	 */
+	public static function retry_one( $id ) {
+		global $wpdb;
+
+		$changed = (int) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare(
+				'UPDATE ' . self::table() . " SET status = 'pending', attempts = 0, available_at = %s WHERE id = %d AND status = 'parked'",
+				current_time( 'mysql', true ),
+				(int) $id
+			)
+		);
+
+		if ( $changed > 0 ) {
+			self::ensure_scheduled();
+		}
+
+		return $changed > 0;
+	}
+
+	/**
+	 * Throw one parked job away.
+	 *
+	 * Some jobs are never going to work — a comment on a page that has since
+	 * been deleted, say — and a list that can only grow stops being read.
+	 *
+	 * @param int $id Job id.
+	 * @return bool Whether anything was removed.
+	 */
+	public static function forget( $id ) {
+		global $wpdb;
+
+		return (int) $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			self::table(),
+			[
+				'id'     => (int) $id,
+				'status' => 'parked',
+			],
+			[ '%d', '%s' ]
+		) > 0;
+	}
+
 	public static function retry_parked() {
 		global $wpdb;
 

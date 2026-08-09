@@ -384,7 +384,7 @@ can only be set in the MarkUp.io interface. We only ever read it, so that costs 
 Verified 2026-08-03 with a real comment set to **high** in MarkUp.io: the task came through as
 `HIGH`. The numeric-on-message form is the one that occurs in practice.
 
-**M4 — Refinements.** ◑ In progress.
+**M4 — Refinements.** ✅ Built and verified 2026-08-09.
 
 **The status new feedback starts in is now a setting.** Motion applies the workspace default —
 `Todo` here — to anything created without a status, which is not where most boards actually pick
@@ -412,8 +412,29 @@ switch defaults to on, so adding a key still starts the integration; unticking i
 sent without disturbing anything else. Comments left while paused are not sent retrospectively —
 resuming would otherwise dump a backlog of stale tasks on somebody.
 
-Still to do in M4: per-page assignee override, labels, the parked-jobs list with retry. Each is
-shippable on its own.
+**One page can be sent to one person**, chosen in the editor panel, and it beats every other rule
+— including the setting that sends all feedback to one person. That setting exists because
+authorship is unreliable; picking somebody by hand is not authorship, it is an instruction, so it
+wins. The id is checked against the workspace's people on save, because an assignee Motion does
+not recognise fails the task later, on the queue, where nobody is watching.
+
+**New tasks can carry labels.** They come back on the workspace object as plain strings — there is
+no labels endpoint, `GET /v1/labels` is a 404 — and behave exactly like statuses: sent as strings,
+returned as objects, and an unknown one is a 404 `Unknown workspace label: …`. So they are checked
+against the live list on save for the same reason statuses are.
+
+**Everything that failed is now listed individually**, with the comment it came from, what was
+being attempted in plain words, why it stopped and how many tries it took. Each row can be retried
+or dropped on its own. A count alone said something was wrong without saying what, leaving
+"retry everything and hope" as the only remedy; and a list that can only grow stops being read,
+which is why dropping one is offered next to retrying it. Each link's nonce is tied to its own job
+id, so a link for one cannot be bent into acting on another.
+
+Verified against the live workspace in one request: status `Needs Dev`, priority `HIGH`, labels
+`In Dev` + `Needs Review` and a real assignee all applied together — **201**, every field returned
+as sent. The probe task was deleted afterwards.
+
+That completes M4.
 
 ---
 

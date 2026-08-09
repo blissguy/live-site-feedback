@@ -313,6 +313,12 @@ class MBM_LF_Motion_Tasks {
 			$body['status'] = $status;
 		}
 
+		$labels = (array) MBM_LF_Options::get( 'motion_labels' );
+
+		if ( ! empty( $labels ) ) {
+			$body['labels'] = array_values( array_map( 'strval', $labels ) );
+		}
+
 		/**
 		 * Filters the task about to be created in Motion.
 		 *
@@ -883,6 +889,19 @@ class MBM_LF_Motion_Tasks {
 	private function assignee_for( $post_id ) {
 		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
 		$assignee  = (string) MBM_LF_Options::get( 'motion_default_assignee' );
+
+		/*
+		 * A choice made on the page itself wins over every rule, including the
+		 * one that sends everything to one person. That setting exists because
+		 * authorship is unreliable; picking somebody by hand is not authorship,
+		 * it is an instruction.
+		 */
+		$chosen = $post_id ? MBM_LF_Post_Meta::motion_assignee( $post_id ) : '';
+
+		if ( '' !== $chosen ) {
+			/** This filter is documented below. */
+			return (string) apply_filters( 'mbm_lf_motion_assignee', $chosen, $post_id, false );
+		}
 
 		/*
 		 * Some sites want everything to land on one person regardless of who

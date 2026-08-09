@@ -28,6 +28,13 @@ class MBM_LF_Post_Meta {
 	const META_DISABLED = '_mbm_lf_disabled';
 
 	/**
+	 * Who this page's feedback goes to in Motion, overriding the usual rule.
+	 *
+	 * @var string
+	 */
+	const META_MOTION_ASSIGNEE = '_mbm_lf_motion_assignee';
+
+	/**
 	 * Nonce action.
 	 */
 	const NONCE = 'mbm_lf_save_post_meta';
@@ -156,6 +163,12 @@ class MBM_LF_Post_Meta {
 		</p>
 
 		<?php
+		/*
+		 * Who the page's feedback goes to applies whichever way the lists are
+		 * organised, so it has to come before the shared-mode return below.
+		 */
+		$this->render_assignee( $post );
+
 		/*
 		 * Everything below only applies when each page keeps its own list. In
 		 * shared mode these controls would do nothing, so they are not shown at
@@ -286,6 +299,49 @@ class MBM_LF_Post_Meta {
 	}
 
 	/**
+	 * Who this page's feedback should go to in Motion.
+	 *
+	 * Hidden entirely until Motion is set up — an empty picker on every page
+	 * would be a question nobody asked.
+	 *
+	 * @param WP_Post $post Post being edited.
+	 */
+	private function render_assignee( $post ) {
+		if ( ! class_exists( 'MBM_LF_Motion_Tasks' ) || ! ( new MBM_LF_Motion_Tasks() )->is_ready() ) {
+			return;
+		}
+
+		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
+		$people    = (array) mbm_lf_motion()->users( $workspace );
+
+		if ( empty( $people ) ) {
+			return;
+		}
+
+		$current = self::motion_assignee( $post->ID );
+		?>
+		<hr />
+		<p>
+			<label for="mbm-lf-motion-assignee">
+				<strong><?php esc_html_e( 'Send this page’s feedback to', 'mbm-live-feedback' ); ?></strong>
+			</label>
+		</p>
+		<input type="hidden" name="mbm_lf_motion_assignee_shown" value="1" />
+		<select id="mbm-lf-motion-assignee" name="mbm_lf_motion_assignee" style="width:100%;">
+			<option value=""><?php esc_html_e( '— Whoever the settings decide —', 'mbm-live-feedback' ); ?></option>
+			<?php foreach ( $people as $person ) : ?>
+				<option value="<?php echo esc_attr( $person['id'] ?? '' ); ?>" <?php selected( $current, $person['id'] ?? '' ); ?>>
+					<?php echo esc_html( $person['name'] ?? $person['email'] ?? $person['id'] ?? '' ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<p class="description">
+			<?php esc_html_e( 'Overrides everything else for this page, including the setting that sends all feedback to one person. Useful when one page belongs to somebody who did not write it.', 'mbm-live-feedback' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
 	 * Save the panel.
 	 *
 	 * @param int     $post_id Post id.
@@ -330,6 +386,61 @@ class MBM_LF_Post_Meta {
 		} else {
 			update_post_meta( $post_id, self::META_DISABLED, 1 );
 		}
+
+		/*
+		 * Only when the control was on screen. It is hidden until Motion is set
+		 * up, and an absent field would otherwise read as "clear it" on every
+		 * save made before then.
+		 */
+		if ( ! empty( $_POST['mbm_lf_motion_assignee_shown'] ) ) {
+			$assignee = isset( $_POST['mbm_lf_motion_assignee'] )
+				? sanitize_text_field( wp_unslash( $_POST['mbm_lf_motion_assignee'] ) )
+				: '';
+
+			// An id Motion does not know would fail the task, and it would fail
+			// later, on the queue, where nobody is watching.
+			if ( '' !== $assignee && ! self::motion_user_exists( $assignee ) ) {
+				$assignee = '';
+			}
+
+			if ( '' === $assignee ) {
+				delete_post_meta( $post_id, self::META_MOTION_ASSIGNEE );
+			} else {
+				update_post_meta( $post_id, self::META_MOTION_ASSIGNEE, $assignee );
+			}
+		}
+	}
+
+	/**
+	 * Whether the workspace has somebody by that id.
+	 *
+	 * @param string $user_id Motion user id.
+	 * @return bool
+	 */
+	private static function motion_user_exists( $user_id ) {
+		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
+
+		if ( '' === $workspace ) {
+			return false;
+		}
+
+		foreach ( (array) mbm_lf_motion()->users( $workspace ) as $user ) {
+			if ( isset( $user['id'] ) && (string) $user['id'] === $user_id ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Who this page's feedback should go to, if anybody was chosen.
+	 *
+	 * @param int $post_id Post id.
+	 * @return string Motion user id, or an empty string.
+	 */
+	public static function motion_assignee( $post_id ) {
+		return (string) get_post_meta( (int) $post_id, self::META_MOTION_ASSIGNEE, true );
 	}
 
 	/* ---------------------------------------------------------------------

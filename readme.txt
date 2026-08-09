@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.12.0
+Stable tag: 0.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,11 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.13.0 =
+* You can now send one page's feedback to a specific person, from the page itself, whoever wrote it.
+* New tasks can carry labels from your Motion workspace, so site feedback is easy to pick out from the rest of the board.
+* Anything that could not be sent to Motion is now listed one by one, with what was tried and why it stopped, and can be retried or dropped individually.
 
 = 0.12.0 =
 * Fixed: feedback left on other sites in the same MarkUp.io workspace could turn into tasks in this site's Motion project. Only comments on pages of this site are sent now.

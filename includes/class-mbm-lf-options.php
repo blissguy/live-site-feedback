@@ -58,6 +58,7 @@ class MBM_LF_Options {
 			'motion_always_fallback' => false,
 			'motion_new_status' => '',
 			'motion_enabled'    => true,
+			'motion_labels'     => [],
 		];
 	}
 

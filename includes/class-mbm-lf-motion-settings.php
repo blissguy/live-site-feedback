@@ -27,6 +27,8 @@ class MBM_LF_Motion_Settings {
 		add_action( 'wp_ajax_mbm_lf_motion_test', [ $this, 'ajax_test' ] );
 		add_action( 'admin_post_mbm_lf_motion_refresh', [ $this, 'handle_refresh' ] );
 		add_action( 'admin_post_mbm_lf_motion_retry', [ $this, 'handle_retry' ] );
+		add_action( 'admin_post_mbm_lf_motion_retry_one', [ $this, 'handle_retry_one' ] );
+		add_action( 'admin_post_mbm_lf_motion_forget', [ $this, 'handle_forget' ] );
 	}
 
 	/**
@@ -57,6 +59,7 @@ class MBM_LF_Motion_Settings {
 				<?php $this->workspace_row(); ?>
 				<?php $this->project_row(); ?>
 				<?php $this->status_row(); ?>
+				<?php $this->labels_row(); ?>
 				<?php $this->assignee_row(); ?>
 			<?php endif; ?>
 			</tbody>
@@ -183,6 +186,85 @@ class MBM_LF_Motion_Settings {
 	}
 
 	/**
+	 * Each thing that could not be sent, and what to do about it.
+	 */
+	private function render_parked() {
+		$jobs = MBM_LF_Motion_Queue::parked();
+
+		if ( empty( $jobs ) ) {
+			return;
+		}
+
+		$labels = [
+			'create_task'   => __( 'Create the task', 'mbm-live-feedback' ),
+			'add_comment'   => __( 'Add a reply to the task', 'mbm-live-feedback' ),
+			'resolve_task'  => __( 'Mark the task finished', 'mbm-live-feedback' ),
+			'reopen_task'   => __( 'Reopen the task', 'mbm-live-feedback' ),
+			'sync_priority' => __( 'Update the task’s priority', 'mbm-live-feedback' ),
+		];
+		?>
+		<table class="widefat striped" style="max-width:60rem;margin:.5rem 0 1rem;">
+			<thead>
+				<tr>
+					<th scope="col"><?php esc_html_e( 'Comment', 'mbm-live-feedback' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'What we tried', 'mbm-live-feedback' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Why it stopped', 'mbm-live-feedback' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Actions', 'mbm-live-feedback' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php
+				foreach ( $jobs as $job ) :
+					$payload = json_decode( (string) $job['payload'], true );
+					$payload = is_array( $payload ) ? $payload : [];
+					$page    = (string) ( $payload['page_url'] ?? '' );
+					$text    = (string) ( $payload['text'] ?? '' );
+					$action  = (string) $job['action'];
+					$nonce   = 'mbm_lf_motion_job_' . (int) $job['id'];
+					$again   = wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_retry_one&job=' . (int) $job['id'] ), $nonce );
+					$drop    = wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_forget&job=' . (int) $job['id'] ), $nonce );
+					?>
+					<tr>
+						<td>
+							<?php if ( '' !== $text ) : ?>
+								<strong><?php echo esc_html( wp_trim_words( $text, 12 ) ); ?></strong><br />
+							<?php endif; ?>
+							<?php if ( '' !== $page ) : ?>
+								<a href="<?php echo esc_url( $page ); ?>"><?php echo esc_html( wp_parse_url( $page, PHP_URL_PATH ) ?: $page ); ?></a>
+							<?php else : ?>
+								<span class="description"><?php esc_html_e( 'On a page we no longer have details for', 'mbm-live-feedback' ); ?></span>
+							<?php endif; ?>
+						</td>
+						<td><?php echo esc_html( $labels[ $action ] ?? $action ); ?></td>
+						<td>
+							<?php echo esc_html( (string) $job['last_error'] ); ?>
+							<br />
+							<span class="description">
+								<?php
+								printf(
+									/* translators: %s: number of attempts. */
+									esc_html( _n( 'after %s try', 'after %s tries', (int) $job['attempts'], 'mbm-live-feedback' ) ),
+									esc_html( number_format_i18n( (int) $job['attempts'] ) )
+								);
+								?>
+							</span>
+						</td>
+						<td>
+							<a href="<?php echo esc_url( $again ); ?>" class="button button-small">
+								<?php esc_html_e( 'Try again', 'mbm-live-feedback' ); ?>
+							</a>
+							<a href="<?php echo esc_url( $drop ); ?>" class="button button-small button-link-delete">
+								<?php esc_html_e( 'Drop it', 'mbm-live-feedback' ); ?>
+							</a>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
 	 * The master switch.
 	 */
 	private function enabled_row() {
@@ -300,6 +382,46 @@ class MBM_LF_Motion_Settings {
 				</select>
 				<p class="description">
 					<?php esc_html_e( 'The status every new piece of feedback arrives in — pick the column your team actually picks work up from. Reopening a resolved comment sends its task back here too.', 'mbm-live-feedback' ); ?>
+				</p>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Labels applied to every new task.
+	 */
+	private function labels_row() {
+		$workspace = (string) MBM_LF_Options::get( 'motion_workspace_id' );
+
+		if ( '' === $workspace ) {
+			return;
+		}
+
+		$available = mbm_lf_motion()->labels( $workspace );
+
+		if ( empty( $available ) ) {
+			return;
+		}
+
+		$current = (array) MBM_LF_Options::get( 'motion_labels' );
+		?>
+		<tr>
+			<th scope="row"><?php esc_html_e( 'Label new tasks', 'mbm-live-feedback' ); ?></th>
+			<td>
+				<input type="hidden" name="motion_labels_shown" value="1" />
+				<?php foreach ( $available as $label ) : ?>
+					<label style="display:block;margin-bottom:.25rem;">
+						<input
+							type="checkbox"
+							name="motion_labels[]"
+							value="<?php echo esc_attr( $label ); ?>"
+							<?php checked( in_array( $label, $current, true ) ); ?> />
+						<?php echo esc_html( $label ); ?>
+					</label>
+				<?php endforeach; ?>
+				<p class="description">
+					<?php esc_html_e( 'Added to every task this plugin creates, so site feedback is easy to pick out from the rest of the board. Leave them all unticked for none.', 'mbm-live-feedback' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -491,6 +613,17 @@ class MBM_LF_Motion_Settings {
 		 * after adding a key, that would read as "switch it off" and the
 		 * integration would arrive dead.
 		 */
+		if ( ! empty( $raw['motion_labels_shown'] ) ) {
+			$wanted = isset( $raw['motion_labels'] ) ? (array) wp_unslash( $raw['motion_labels'] ) : [];
+			$known  = mbm_lf_motion()->labels( $workspace );
+
+			// An unknown label is a 404 on every task creation, discovered at
+			// drain time rather than here.
+			$labels = array_values( array_intersect( array_map( 'sanitize_text_field', $wanted ), $known ) );
+
+			MBM_LF_Options::update( [ 'motion_labels' => $labels ] );
+		}
+
 		if ( ! empty( $raw['motion_enabled_shown'] ) ) {
 			MBM_LF_Options::update( [ 'motion_enabled' => ! empty( $raw['motion_enabled'] ) ] );
 		}
@@ -574,19 +707,17 @@ class MBM_LF_Motion_Settings {
 					?>
 				</p>
 
-				<?php foreach ( $stats['errors'] as $error ) : ?>
-					<p><code><?php echo esc_html( $error ); ?></code></p>
-				<?php endforeach; ?>
-
 				<p>
 					<a
 						href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_retry' ), 'mbm_lf_motion_retry' ) ); ?>"
 						class="button button-secondary"
 					>
-						<?php esc_html_e( 'Try sending them again', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Try sending them all again', 'mbm-live-feedback' ); ?>
 					</a>
 				</p>
 			</div>
+
+			<?php $this->render_parked(); ?>
 		<?php endif; ?>
 
 		<?php if ( ! defined( 'DISABLE_WP_CRON' ) || ! DISABLE_WP_CRON ) : ?>
@@ -600,6 +731,66 @@ class MBM_LF_Motion_Settings {
 	/**
 	 * Put failed jobs back in the queue.
 	 */
+	/**
+	 * Put one parked job back in the queue.
+	 */
+	public function handle_retry_one() {
+		$job = $this->requested_job();
+
+		MBM_LF_Motion_Queue::retry_one( $job );
+
+		$this->back_to_settings( 'motion-retried-one' );
+	}
+
+	/**
+	 * Throw one parked job away.
+	 */
+	public function handle_forget() {
+		$job = $this->requested_job();
+
+		MBM_LF_Motion_Queue::forget( $job );
+
+		$this->back_to_settings( 'motion-forgotten' );
+	}
+
+	/**
+	 * The job id in the request, once it is allowed to be acted on.
+	 *
+	 * The nonce is tied to the specific job, so a link for one cannot be bent
+	 * into acting on another.
+	 *
+	 * @return int
+	 */
+	private function requested_job() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
+		}
+
+		$job = isset( $_GET['job'] ) ? absint( wp_unslash( $_GET['job'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		check_admin_referer( 'mbm_lf_motion_job_' . $job );
+
+		return $job;
+	}
+
+	/**
+	 * Return to the settings screen with something to say.
+	 *
+	 * @param string $notice Notice key.
+	 */
+	private function back_to_settings( $notice ) {
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'          => MBM_LF_Settings::PAGE,
+					'mbm_lf_notice' => $notice,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
 	public function handle_retry() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
