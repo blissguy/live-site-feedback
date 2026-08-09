@@ -438,6 +438,36 @@ That completes M4.
 
 ---
 
+## 13. Tasks say how wide the window was
+
+Asked for after resizing a browser and finding MarkUp.io still labelled every comment "desktop".
+
+It always will. `platform` comes from the user agent — `e.mobile ? "mobile" : "desktop"`, falling
+back to a `/Mobi|Android/i` test — so it never reflects the window, and it has no tablet value at
+all. `deviceType`, which would drive a breakpoint label in their interface, appears once in the
+entire bundle, in a helper that reads it; nothing in the SDK ever sets one. Neither is reachable
+from here.
+
+The useful part is that **the real viewport is recorded anyway**. Each thread carries a
+`browserContext` with `viewportWidth`/`viewportHeight` taken from `window.innerWidth`/
+`innerHeight` at the moment of commenting. Proven rather than assumed: a comment left at a narrow
+width came back as **425 × 956** where nine others read 1800 × 1043, so the value is live and not
+snapshotted when the SDK loads.
+
+So the task now says `Seen at **425 × 956** · Google Chrome 150 · macOS`. Raw numbers, no name.
+MarkUp.io's own label is a guess we cannot correct, and inventing a second name would only be
+another opinion to argue with — the exact width is what somebody types into their browser to see
+what the client saw.
+
+`browserContext` is absent from the documented `CommentNotification`, so this normally costs one
+read of the thread. The delivery is checked first regardless, because the same documentation omits
+fields real deliveries do carry — `comment.location.canonicalUrl` among them — so "undocumented"
+has not meant "not sent". If it ever appears there, the read stops happening on its own. A MarkUp
+read is cheap beside a Motion one: a thousand a minute against a hundred and twenty. When the
+context cannot be established the line is simply left out.
+
+---
+
 ## 12. Other sites' feedback was becoming our tasks
 
 Found in use, 2026-08-09: a Motion project set up for one site was collecting tasks from two other

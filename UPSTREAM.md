@@ -182,6 +182,19 @@ Not bugs — just things worth knowing that the documentation does not mention.
 - **Undocumented endpoints** the SDK uses: `/auth/sdk-exchange` and `/auth/sdk-exchange/result`
   (the sign-in polling pair), and `POST /markups/:id/read-only`.
 - **An extra event** exists in the SDK types but not the docs: `comment:reply:delete`.
+- **Every comment records the viewport it was left at.** `browserContext` on a thread carries
+  `viewportWidth`/`viewportHeight` from `window.innerWidth`/`innerHeight`, read at the moment of
+  commenting — verified by a comment left at 425 × 956 against nine others at 1800 × 1043. It also
+  carries browser, version, os, osVersion, screen size and `platform`. None of it is documented,
+  and `browserContext` is absent from the documented `CommentNotification`, so a delivery may not
+  include it.
+- **`platform` is decided from the user agent, not the window.** The bundle's
+  `e.mobile ? "mobile" : "desktop"`, falling back to `/Mobi|Android/i` on the user agent, returns
+  only those two values — never tablet, and never anything width-derived. Resizing a desktop
+  browser leaves it saying `desktop` forever, which is why MarkUp.io shows every SDK comment that
+  way. `deviceType`, the field that would drive a breakpoint label, appears exactly once in the
+  whole bundle and only in a helper that *reads* it — the SDK never sets one. Nothing here can
+  change either; we report the raw viewport ourselves instead.
 - **Motion labels arrive on the workspace**, as a flat array of strings under `labels`. There is no
   labels endpoint — `GET /v1/labels` is a 404. `POST /v1/tasks` takes them as plain strings and
   returns them as objects (`[{"name":"In Dev"}]`), and an unknown one is a **404 `Unknown workspace

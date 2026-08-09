@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.13.0
+Stable tag: 0.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,9 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.14.0 =
+* Tasks now say how wide the browser window was when the comment was left, along with the browser and operating system, so you can reproduce what the client saw at the exact width they saw it.
 
 = 0.13.0 =
 * You can now send one page's feedback to a specific person, from the page itself, whoever wrote it.

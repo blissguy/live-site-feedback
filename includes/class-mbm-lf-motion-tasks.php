@@ -148,6 +148,9 @@ class MBM_LF_Motion_Tasks {
 				'author'    => (string) ( $comment['author']['name'] ?? '' ),
 				'page_url'  => (string) ( $comment['location']['canonicalUrl'] ?? $comment['location']['originalUrl'] ?? '' ),
 				'markup_id' => (string) ( $body['data']['markup']['id'] ?? '' ),
+				'browser'   => isset( $comment['browserContext'] ) && is_array( $comment['browserContext'] )
+					? $comment['browserContext']
+					: [],
 			]
 		);
 	}
@@ -292,7 +295,7 @@ class MBM_LF_Motion_Tasks {
 			'name'        => $this->title( $payload, $post_id ),
 			'workspaceId' => (string) MBM_LF_Options::get( 'motion_workspace_id' ),
 			'projectId'   => (string) MBM_LF_Options::get( 'motion_project_id' ),
-			'description' => $this->description( $payload, $post_id ),
+			'description' => $this->description( $payload, $post_id, $this->browser_context( $thread_id, $payload ) ),
 		];
 
 		$assignee = $this->assignee_for( $post_id );
@@ -605,6 +608,43 @@ class MBM_LF_Motion_Tasks {
 	}
 
 	/**
+	 * Where the comment was left from: viewport, browser, operating system.
+	 *
+	 * The documented CommentNotification has no browser context, so this
+	 * normally costs one read of the thread. It is checked in the delivery
+	 * first anyway, because the same documentation omits fields real
+	 * deliveries do carry — `comment.location.canonicalUrl` among them — so
+	 * "not documented" has not meant "not sent". If it turns up there, the
+	 * read is skipped.
+	 *
+	 * A MarkUp read is cheap next to a Motion one: a thousand a minute against
+	 * a hundred and twenty.
+	 *
+	 * @param string $thread_id Thread id.
+	 * @param array  $payload   What the delivery told us.
+	 * @return array Empty when it cannot be established.
+	 */
+	private function browser_context( $thread_id, array $payload ) {
+		$context = isset( $payload['browser'] ) && is_array( $payload['browser'] ) ? $payload['browser'] : [];
+
+		if ( empty( $context ) ) {
+			$thread = mbm_lf_api()->request( 'GET', '/api/v2/threads/' . rawurlencode( $thread_id ) );
+
+			if ( is_wp_error( $thread ) ) {
+				// Not worth failing a task over. The comment still gets through
+				// without it.
+				return [];
+			}
+
+			$context = isset( $thread['browserContext'] ) && is_array( $thread['browserContext'] )
+				? $thread['browserContext']
+				: [];
+		}
+
+		return $context;
+	}
+
+	/**
 	 * The status a new or reopened task should be in.
 	 *
 	 * Empty means "say nothing and let Motion apply the workspace default",
@@ -805,7 +845,7 @@ class MBM_LF_Motion_Tasks {
 	 * @param int   $post_id Page id, or 0.
 	 * @return string
 	 */
-	private function description( array $payload, $post_id ) {
+	private function description( array $payload, $post_id, array $context = [] ) {
 		$lines = [];
 
 		$text = trim( wp_strip_all_tags( (string) $payload['text'] ) );
@@ -849,6 +889,13 @@ class MBM_LF_Motion_Tasks {
 			$lines[] = '';
 		}
 
+		$seen = $this->viewport_line( $context );
+
+		if ( '' !== $seen ) {
+			$lines[] = $seen;
+			$lines[] = '';
+		}
+
 		if ( '' !== (string) $payload['app_url'] ) {
 			$lines[] = sprintf(
 				'[%s](%s)',
@@ -874,6 +921,49 @@ class MBM_LF_Motion_Tasks {
 		$path = wp_parse_url( $url, PHP_URL_PATH );
 
 		return $path && '/' !== $path ? trim( $path, '/' ) : __( 'Home page', 'mbm-live-feedback' );
+	}
+
+	/**
+	 * The width the comment was left at, as a plain number.
+	 *
+	 * Deliberately not translated into a name. MarkUp.io calls everything
+	 * "desktop" — it decides from the user agent, so resizing a window never
+	 * changes it — and a name of our own would just be a second opinion to
+	 * argue with. The exact width is what somebody types into their browser to
+	 * see what the client saw.
+	 *
+	 * @param array $context Browser context from MarkUp.io.
+	 * @return string Markdown, or an empty string.
+	 */
+	private function viewport_line( array $context ) {
+		$width  = isset( $context['viewportWidth'] ) ? (int) $context['viewportWidth'] : 0;
+		$height = isset( $context['viewportHeight'] ) ? (int) $context['viewportHeight'] : 0;
+
+		if ( $width < 1 ) {
+			return '';
+		}
+
+		if ( $height > 0 ) {
+			/* translators: 1: viewport width in pixels, 2: viewport height in pixels. */
+			$parts = [ sprintf( __( 'Seen at **%1$d × %2$d**', 'mbm-live-feedback' ), $width, $height ) ];
+		} else {
+			/* translators: %d: viewport width in pixels. */
+			$parts = [ sprintf( __( 'Seen at **%d** wide', 'mbm-live-feedback' ), $width ) ];
+		}
+
+		$browser = trim( (string) ( $context['browserName'] ?? '' ) . ' ' . (string) ( $context['browserVersion'] ?? '' ) );
+
+		if ( '' !== $browser ) {
+			$parts[] = $browser;
+		}
+
+		$os = trim( (string) ( $context['os'] ?? '' ) );
+
+		if ( '' !== $os ) {
+			$parts[] = $os;
+		}
+
+		return implode( ' · ', $parts );
 	}
 
 	/**
