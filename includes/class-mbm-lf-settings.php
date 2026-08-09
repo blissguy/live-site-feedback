@@ -264,7 +264,6 @@ class MBM_LF_Settings {
 	 * the main screen invites somebody to change it anyway.
 	 */
 	private function render_expert_fields() {
-		$capability = (string) MBM_LF_Options::get( 'capability' );
 		?>
 		<h2 class="title"><?php esc_html_e( 'Advanced', 'mbm-live-feedback' ); ?></h2>
 
@@ -298,23 +297,6 @@ class MBM_LF_Settings {
 					>
 					<p class="description">
 						<?php esc_html_e( 'Clear it and a new one is made.', 'mbm-live-feedback' ); ?>
-					</p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row">
-					<label for="mbm-lf-capability"><?php esc_html_e( 'Permission', 'mbm-live-feedback' ); ?></label>
-				</th>
-				<td>
-					<input
-						type="text"
-						class="regular-text code"
-						id="mbm-lf-capability"
-						name="capability"
-						value="<?php echo esc_attr( $capability ); ?>"
-					>
-					<p class="description">
-						<?php esc_html_e( 'Used when “People who can edit content” is selected.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -667,7 +649,8 @@ class MBM_LF_Settings {
 	 */
 	private function render_visibility_fields() {
 		$mode       = (string) MBM_LF_Options::get( 'visibility' );
-		$roles = (array) MBM_LF_Options::get( 'roles' );
+		$capability = (string) MBM_LF_Options::get( 'capability' );
+		$roles      = (array) MBM_LF_Options::get( 'roles' );
 		$all_roles  = wp_roles()->get_names();
 		?>
 		<table class="form-table" role="presentation">
@@ -726,6 +709,23 @@ class MBM_LF_Settings {
 			</tr>
 
 			</tbody>
+			<tr>
+				<th scope="row">
+					<label for="mbm-lf-capability"><?php esc_html_e( 'Permission', 'mbm-live-feedback' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="text"
+						class="regular-text code"
+						id="mbm-lf-capability"
+						name="capability"
+						value="<?php echo esc_attr( $capability ); ?>"
+					>
+					<p class="description">
+						<?php esc_html_e( 'Used when “People who can edit content” is selected.', 'mbm-live-feedback' ); ?>
+					</p>
+				</td>
+			</tr>
 		</table>
 		<?php
 	}

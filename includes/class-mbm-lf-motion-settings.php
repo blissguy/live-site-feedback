@@ -474,7 +474,7 @@ class MBM_LF_Motion_Settings {
 					</p>
 
 					<p class="description">
-						<?php esc_html_e( 'Ignore who wrote the page. Useful when they have left.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Ignore who wrote the page.', 'mbm-live-feedback' ); ?>
 					</p>
 
 					<?php if ( ! MBM_LF_Options::get( 'motion_always_fallback' ) ) : ?>
