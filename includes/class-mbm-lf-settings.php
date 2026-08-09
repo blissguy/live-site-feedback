@@ -83,109 +83,311 @@ class MBM_LF_Settings {
 		 */
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$notice = isset( $_GET['mbm_lf_notice'] ) ? sanitize_key( wp_unslash( $_GET['mbm_lf_notice'] ) ) : '';
+
+		$tabs = self::tabs();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$requested = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+		$active    = isset( $tabs[ $requested ] ) ? $requested : 'setup';
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Live Site Feedback', 'mbm-live-feedback' ); ?></h1>
 
-			<p class="description" style="max-width:44rem;">
-				<?php esc_html_e( 'Let your clients leave comments straight on the website, pinned to the exact spot they are looking at. Comments are collected in your MarkUp.io account.', 'mbm-live-feedback' ); ?>
-			</p>
-
 			<?php $this->render_notice( $notice ); ?>
 
-			<?php $this->render_setup_section(); ?>
+			<?php $this->render_status_strip(); ?>
 
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<h2 class="nav-tab-wrapper" id="mbm-lf-tabs">
+				<?php foreach ( $tabs as $slug => $label ) : ?>
+					<a
+						href="<?php echo esc_url( add_query_arg( [ 'page' => self::PAGE, 'tab' => $slug ], admin_url( 'admin.php' ) ) ); ?>"
+						class="nav-tab <?php echo $slug === $active ? 'nav-tab-active' : ''; ?>"
+						data-tab="<?php echo esc_attr( $slug ); ?>"
+					>
+						<?php echo esc_html( $label ); ?>
+					</a>
+				<?php endforeach; ?>
+			</h2>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="mbm-lf-form">
 				<input type="hidden" name="action" value="mbm_lf_save_settings">
+				<input type="hidden" name="mbm_lf_tab" id="mbm-lf-active-tab" value="<?php echo esc_attr( $active ); ?>">
 				<?php wp_nonce_field( self::NONCE ); ?>
 
-				<h2 class="title"><?php esc_html_e( 'Connect your MarkUp.io account', 'mbm-live-feedback' ); ?></h2>
-
-				<table class="form-table" role="presentation">
-					<tbody>
-					<?php
-					$this->render_secret_row(
-						'api_key',
-						__( 'API key', 'mbm-live-feedback' ),
-						__( 'Create a key in MarkUp.io under your workspace settings, then paste it here. It is only ever used from your server, never sent to visitors.', 'mbm-live-feedback' )
-					);
-
-					$this->render_text_row(
-						'public_key',
-						__( 'Site identifier', 'mbm-live-feedback' ),
-						__( 'Filled in for you when you press Set up. Unlike the API key this one is safe to appear in your pages, and the feedback bar will not load without it.', 'mbm-live-feedback' )
-					);
-					?>
-					</tbody>
-				</table>
-
-				<h2 class="title"><?php esc_html_e( 'Signing key', 'mbm-live-feedback' ); ?></h2>
-
-				<p class="description" style="max-width:44rem;">
-					<?php esc_html_e( 'This is what lets logged-in users comment as themselves instead of signing in to MarkUp.io separately. Point it at a key file stored outside your website folder.', 'mbm-live-feedback' ); ?>
-				</p>
-
-				<table class="form-table" role="presentation">
-					<tbody>
-					<?php
-					$this->render_text_row(
-						'private_key_path',
-						__( 'Key file location', 'mbm-live-feedback' ),
-						__( 'Full path to the private key file on your server, for example /home/you/keys/markup.pem', 'mbm-live-feedback' ),
-						true
-					);
-					?>
-					</tbody>
-				</table>
-
-				<h2 class="title"><?php esc_html_e( 'Where feedback appears', 'mbm-live-feedback' ); ?></h2>
-
-				<?php $this->render_placement_fields(); ?>
-
-				<h2 class="title"><?php esc_html_e( 'Who can leave feedback', 'mbm-live-feedback' ); ?></h2>
-
-				<?php $this->render_visibility_fields(); ?>
-
-				<h2 class="title"><?php esc_html_e( 'How people are identified', 'mbm-live-feedback' ); ?></h2>
-
-				<?php $this->render_identity_fields(); ?>
-
-				<h2 class="title"><?php esc_html_e( 'Appearance', 'mbm-live-feedback' ); ?></h2>
-
-				<?php $this->render_appearance_fields(); ?>
-
 				<?php
-				/**
-				 * Lets an optional module add its own settings.
-				 *
-				 * Used by the Motion integration, which stays out of this class
-				 * entirely and adds nothing at all unless it is configured.
+				/*
+				 * Every panel is in the one form, so a single save covers the
+				 * whole screen and moving between tabs cannot lose anything.
+				 * They all render visible: the script below hides the inactive
+				 * ones, so with no JavaScript this degrades to one long page
+				 * that still works rather than to four unreachable ones.
 				 */
-				do_action( 'mbm_lf_settings_sections' );
 				?>
+				<div class="mbm-lf-panel" data-panel="setup">
+					<?php $this->render_setup_section(); ?>
+
+					<h2 class="title"><?php esc_html_e( 'Your MarkUp.io account', 'mbm-live-feedback' ); ?></h2>
+
+					<table class="form-table" role="presentation">
+						<tbody>
+						<?php
+						$this->render_secret_row(
+							'api_key',
+							__( 'API key', 'mbm-live-feedback' ),
+							__( 'From your workspace settings in MarkUp.io. Used only on your server.', 'mbm-live-feedback' )
+						);
+
+						$this->render_text_row(
+							'public_key',
+							__( 'Site identifier', 'mbm-live-feedback' ),
+							__( 'Filled in by Set up. Safe to appear in your pages.', 'mbm-live-feedback' )
+						);
+						?>
+						</tbody>
+					</table>
+				</div>
+
+				<div class="mbm-lf-panel" data-panel="feedback">
+					<h2 class="title"><?php esc_html_e( 'Where feedback appears', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_placement_fields(); ?>
+
+					<h2 class="title"><?php esc_html_e( 'Appearance', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_appearance_fields(); ?>
+				</div>
+
+				<div class="mbm-lf-panel" data-panel="people">
+					<h2 class="title"><?php esc_html_e( 'Who can leave feedback', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_visibility_fields(); ?>
+
+					<h2 class="title"><?php esc_html_e( 'How people are identified', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_identity_fields(); ?>
+				</div>
+
+				<div class="mbm-lf-panel" data-panel="integrations">
+					<?php
+					/**
+					 * Lets an optional module add its own settings.
+					 *
+					 * Used by the Motion integration, which stays out of this
+					 * class entirely and adds nothing at all unless configured.
+					 */
+					do_action( 'mbm_lf_settings_sections' );
+					?>
+				</div>
+
+				<div class="mbm-lf-panel" data-panel="advanced">
+					<?php $this->render_expert_fields(); ?>
+
+					<?php $this->render_status_table(); ?>
+
+					<p>
+						<button type="button" class="button button-secondary" id="mbm-lf-test">
+							<?php esc_html_e( 'Test connection', 'mbm-live-feedback' ); ?>
+						</button>
+						<span id="mbm-lf-test-result" style="margin-left:.5rem;"></span>
+					</p>
+
+					<?php $this->render_wp_config_help(); ?>
+
+					<?php $this->render_updates_section(); ?>
+				</div>
 
 				<?php submit_button( __( 'Save settings', 'mbm-live-feedback' ) ); ?>
 			</form>
 
-			<hr>
-
-			<h2><?php esc_html_e( 'Current status', 'mbm-live-feedback' ); ?></h2>
-
-			<?php $this->render_status_table(); ?>
-
-			<p>
-				<button type="button" class="button button-secondary" id="mbm-lf-test">
-					<?php esc_html_e( 'Test connection', 'mbm-live-feedback' ); ?>
-				</button>
-				<span id="mbm-lf-test-result" style="margin-left:.5rem;"></span>
-			</p>
-
-			<?php $this->render_wp_config_help(); ?>
-
-			<?php $this->render_updates_section(); ?>
+			<?php $this->render_tab_script( $active ); ?>
 		</div>
 		<?php
 		$this->render_test_script();
+	}
+
+	/**
+	 * The tabs, in the order they appear.
+	 *
+	 * @return array<string,string>
+	 */
+	private static function tabs() {
+		return [
+			'setup'        => __( 'Setup', 'mbm-live-feedback' ),
+			'feedback'     => __( 'Feedback', 'mbm-live-feedback' ),
+			'people'       => __( 'People', 'mbm-live-feedback' ),
+			'integrations' => __( 'Integrations', 'mbm-live-feedback' ),
+			'advanced'     => __( 'Advanced', 'mbm-live-feedback' ),
+		];
+	}
+
+	/**
+	 * The state of things, on every tab.
+	 *
+	 * Whether this is connected and working is the first thing anybody wants
+	 * to know when something looks wrong, and it used to be three screens down.
+	 */
+	private function render_status_strip() {
+		$connected = MBM_LF_Credentials::has( 'api_key' );
+		$ready     = $connected && mbm_lf_provisioner()->is_provisioned();
+		$on        = (bool) MBM_LF_Options::get( 'enabled' );
+
+		$items = [
+			[
+				$ready ? __( 'Connected', 'mbm-live-feedback' ) : ( $connected ? __( 'Not set up', 'mbm-live-feedback' ) : __( 'Not connected', 'mbm-live-feedback' ) ),
+				$ready,
+			],
+			[
+				$on ? __( 'Feedback bar on', 'mbm-live-feedback' ) : __( 'Feedback bar off', 'mbm-live-feedback' ),
+				$on,
+			],
+		];
+
+		if ( ! mbm_lf_provisioner()->site_is_publicly_reachable() ) {
+			$items[] = [ __( 'Not reachable from the internet', 'mbm-live-feedback' ), false ];
+		}
+		?>
+		<p style="margin:1rem 0 .5rem;">
+			<?php foreach ( $items as $item ) : ?>
+				<span style="margin-right:1.25rem;">
+					<span style="color:<?php echo $item[1] ? '#1d7a3c' : '#996800'; ?>;font-size:1.1em;">●</span>
+					<?php echo esc_html( $item[0] ); ?>
+				</span>
+			<?php endforeach; ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * The settings almost nobody should change.
+	 *
+	 * Kept together and out of the way. Explaining when to ignore a field on
+	 * the main screen invites somebody to change it anyway.
+	 */
+	private function render_expert_fields() {
+		$capability = (string) MBM_LF_Options::get( 'capability' );
+		?>
+		<h2 class="title"><?php esc_html_e( 'Advanced', 'mbm-live-feedback' ); ?></h2>
+
+		<p class="description" style="max-width:44rem;">
+			<?php esc_html_e( 'These are set up for you. Change them only if you know you need to.', 'mbm-live-feedback' ); ?>
+		</p>
+
+		<table class="form-table" role="presentation">
+			<tbody>
+			<?php
+			$this->render_text_row(
+				'private_key_path',
+				__( 'Signing key file', 'mbm-live-feedback' ),
+				__( 'Full path on your server, stored outside your website folder.', 'mbm-live-feedback' ),
+				true
+			);
+			?>
+			<tr>
+				<th scope="row">
+					<label for="mbm-lf-default-markup">
+						<?php esc_html_e( 'Shared list ID', 'mbm-live-feedback' ); ?>
+					</label>
+				</th>
+				<td>
+					<input
+						type="text"
+						class="regular-text code"
+						id="mbm-lf-default-markup"
+						name="default_markup_id"
+						value="<?php echo esc_attr( (string) MBM_LF_Options::get( 'default_markup_id' ) ); ?>"
+					>
+					<p class="description">
+						<?php esc_html_e( 'Filled in for you. Only change it if you already have a MarkUp.io entry you would rather collect this site’s feedback in — clear it and a new one will be made.', 'mbm-live-feedback' ); ?>
+					</p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row">
+					<label for="mbm-lf-capability"><?php esc_html_e( 'Required permission', 'mbm-live-feedback' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="text"
+						class="regular-text code"
+						id="mbm-lf-capability"
+						name="capability"
+						value="<?php echo esc_attr( $capability ); ?>"
+					>
+					<p class="description">
+						<?php esc_html_e( 'Only applies when “People who can edit content” is selected. Leave as edit_posts unless you know you need something different.', 'mbm-live-feedback' ); ?>
+					</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Switch tabs without leaving the page, and say something before losing edits.
+	 *
+	 * @param string $active Active tab slug.
+	 */
+	private function render_tab_script( $active ) {
+		?>
+		<script>
+		( function () {
+			var form = document.getElementById( 'mbm-lf-form' );
+			var tabs = document.getElementById( 'mbm-lf-tabs' );
+
+			if ( ! form || ! tabs ) {
+				return;
+			}
+
+			var panels = form.querySelectorAll( '.mbm-lf-panel' );
+			var field  = document.getElementById( 'mbm-lf-active-tab' );
+			var dirty  = false;
+
+			function show( name ) {
+				panels.forEach( function ( panel ) {
+					panel.style.display = panel.dataset.panel === name ? '' : 'none';
+				} );
+
+				tabs.querySelectorAll( '.nav-tab' ).forEach( function ( tab ) {
+					tab.classList.toggle( 'nav-tab-active', tab.dataset.tab === name );
+				} );
+
+				field.value = name;
+			}
+
+			tabs.addEventListener( 'click', function ( event ) {
+				var tab = event.target.closest( '.nav-tab' );
+
+				if ( ! tab ) {
+					return;
+				}
+
+				// Nothing is lost by moving between panels, so no warning here.
+				event.preventDefault();
+				show( tab.dataset.tab );
+			} );
+
+			form.addEventListener( 'change', function () { dirty = true; } );
+			form.addEventListener( 'input', function () { dirty = true; } );
+
+			// Saving is not leaving. Without this, pressing Save asks whether
+			// you want to discard the changes you are in the middle of saving.
+			form.addEventListener( 'submit', function () { dirty = false; } );
+
+			window.addEventListener( 'beforeunload', function ( event ) {
+				if ( ! dirty ) {
+					return;
+				}
+
+				// The wording is the browser's; ours is ignored either way.
+				event.preventDefault();
+				event.returnValue = '';
+			} );
+
+			show( <?php echo wp_json_encode( $active ); ?> );
+		}() );
+		</script>
+		<?php
 	}
 
 	/* ---------------------------------------------------------------------
@@ -415,25 +617,6 @@ class MBM_LF_Settings {
 				</td>
 			</tr>
 
-			<tr>
-				<th scope="row">
-					<label for="mbm-lf-default-markup">
-						<?php esc_html_e( 'Shared list ID', 'mbm-live-feedback' ); ?>
-					</label>
-				</th>
-				<td>
-					<input
-						type="text"
-						class="regular-text code"
-						id="mbm-lf-default-markup"
-						name="default_markup_id"
-						value="<?php echo esc_attr( (string) MBM_LF_Options::get( 'default_markup_id' ) ); ?>"
-					>
-					<p class="description">
-						<?php esc_html_e( 'Filled in for you. Only change it if you already have a MarkUp.io entry you would rather collect this site’s feedback in — clear it and a new one will be made.', 'mbm-live-feedback' ); ?>
-					</p>
-				</td>
-			</tr>
 			</tbody>
 		</table>
 		<?php
@@ -487,8 +670,7 @@ class MBM_LF_Settings {
 	 */
 	private function render_visibility_fields() {
 		$mode       = (string) MBM_LF_Options::get( 'visibility' );
-		$capability = (string) MBM_LF_Options::get( 'capability' );
-		$roles      = (array) MBM_LF_Options::get( 'roles' );
+		$roles = (array) MBM_LF_Options::get( 'roles' );
 		$all_roles  = wp_roles()->get_names();
 		?>
 		<table class="form-table" role="presentation">
@@ -546,23 +728,6 @@ class MBM_LF_Settings {
 				</td>
 			</tr>
 
-			<tr>
-				<th scope="row">
-					<label for="mbm-lf-capability"><?php esc_html_e( 'Required permission', 'mbm-live-feedback' ); ?></label>
-				</th>
-				<td>
-					<input
-						type="text"
-						class="regular-text code"
-						id="mbm-lf-capability"
-						name="capability"
-						value="<?php echo esc_attr( $capability ); ?>"
-					>
-					<p class="description">
-						<?php esc_html_e( 'Only applies when “People who can edit content” is selected. Leave as edit_posts unless you know you need something different.', 'mbm-live-feedback' ); ?>
-					</p>
-				</td>
-			</tr>
 			</tbody>
 		</table>
 		<?php
@@ -777,11 +942,15 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			<?php esc_html_e( 'Updates come straight from the plugin’s repository, so this site updates the same way as any other plugin — no downloading or uploading files.', 'mbm-live-feedback' ); ?>
 		</p>
 
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="mbm_lf_check_updates">
-			<?php wp_nonce_field( 'mbm_lf_check_updates' ); ?>
-			<?php submit_button( __( 'Check for updates now', 'mbm-live-feedback' ), 'secondary', 'submit', false ); ?>
-		</form>
+		<?php /* A link, not a form: this sits inside the settings form and HTML has no nested forms. */ ?>
+		<p>
+			<a
+				href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_check_updates' ), 'mbm_lf_check_updates' ) ); ?>"
+				class="button button-secondary"
+			>
+				<?php esc_html_e( 'Check for updates now', 'mbm-live-feedback' ); ?>
+			</a>
+		</p>
 		<?php
 	}
 
@@ -961,10 +1130,17 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 		 */
 		do_action( 'mbm_lf_save_settings', $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
+		// Come back to the tab they were on, rather than throwing them to the
+		// front of the screen every time they save.
+		$tabs = self::tabs();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$tab = isset( $_POST['mbm_lf_tab'] ) ? sanitize_key( wp_unslash( $_POST['mbm_lf_tab'] ) ) : '';
+
 		wp_safe_redirect(
 			add_query_arg(
 				[
 					'page'          => self::PAGE,
+					'tab'           => isset( $tabs[ $tab ] ) ? $tab : 'setup',
 					'mbm_lf_notice' => 'saved',
 				],
 				admin_url( 'admin.php' )
