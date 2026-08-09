@@ -41,7 +41,7 @@ class MBM_LF_Motion_Settings {
 		<h2 class="title"><?php esc_html_e( 'Send feedback to Motion', 'mbm-live-feedback' ); ?></h2>
 
 		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Optional. Connect Motion and each new comment can become a task for whoever looks after that page. Leave the key empty and nothing about Motion runs at all.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Turn new comments into Motion tasks. Leave the key empty and none of this runs.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<table class="form-table" role="presentation">
@@ -74,7 +74,7 @@ class MBM_LF_Motion_Settings {
 			</p>
 
 			<p class="description" style="max-width:44rem;">
-				<?php esc_html_e( 'The lists above are remembered for an hour so this screen stays quick. Just made a new project or added someone to the team? Fetch them again now:', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Just added a project or a person in Motion?', 'mbm-live-feedback' ); ?>
 			</p>
 
 			<p>
@@ -91,7 +91,7 @@ class MBM_LF_Motion_Settings {
 			<?php $this->render_script(); ?>
 		<?php else : ?>
 			<p class="description">
-				<?php esc_html_e( 'Save the key and the workspace, project and assignee choices will appear here.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Save the key to choose a workspace and project.', 'mbm-live-feedback' ); ?>
 			</p>
 		<?php endif; ?>
 		<?php
@@ -177,7 +177,7 @@ class MBM_LF_Motion_Settings {
 						<?php endforeach; ?>
 					</select>
 					<p class="description">
-						<?php esc_html_e( 'Save after changing this and the project list below will follow.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Save to load this workspace’s projects.', 'mbm-live-feedback' ); ?>
 					</p>
 				<?php endif; ?>
 			</td>
@@ -284,7 +284,7 @@ class MBM_LF_Motion_Settings {
 					<?php esc_html_e( 'Turn new feedback into Motion tasks', 'mbm-live-feedback' ); ?>
 				</label>
 				<p class="description">
-					<?php esc_html_e( 'Switch this off to pause the integration without removing your key or losing any of the settings below. While it is off, comments are still collected here — they simply do not reach Motion, and comments left during the pause are not sent retrospectively when you switch it back on.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Pause without losing your key or settings. Comments left while paused are not sent later.', 'mbm-live-feedback' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -321,7 +321,7 @@ class MBM_LF_Motion_Settings {
 						<?php endforeach; ?>
 					</select>
 					<p class="description">
-						<?php esc_html_e( 'Where this site’s feedback should land. Usually the project for this client.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Where this site’s feedback lands.', 'mbm-live-feedback' ); ?>
 					</p>
 				<?php endif; ?>
 			</td>
@@ -381,7 +381,7 @@ class MBM_LF_Motion_Settings {
 					?>
 				</select>
 				<p class="description">
-					<?php esc_html_e( 'The status every new piece of feedback arrives in — pick the column your team actually picks work up from. Reopening a resolved comment sends its task back here too.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Reopening a comment sends its task back here too.', 'mbm-live-feedback' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -421,7 +421,7 @@ class MBM_LF_Motion_Settings {
 					</label>
 				<?php endforeach; ?>
 				<p class="description">
-					<?php esc_html_e( 'Added to every task this plugin creates, so site feedback is easy to pick out from the rest of the board. Leave them all unticked for none.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Added to every task created from this site.', 'mbm-live-feedback' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -458,7 +458,7 @@ class MBM_LF_Motion_Settings {
 						<?php endforeach; ?>
 					</select>
 					<p class="description">
-						<?php esc_html_e( 'Feedback normally goes to whoever wrote the page, matched by email address. This is who picks it up when that person has no Motion account.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Used when the page’s author has no Motion account.', 'mbm-live-feedback' ); ?>
 					</p>
 
 					<p style="margin-top:.75rem;">
@@ -474,7 +474,7 @@ class MBM_LF_Motion_Settings {
 					</p>
 
 					<p class="description">
-						<?php esc_html_e( 'Tick this and it stops looking at who wrote the page. Useful when pages were built by a freelancer, or by someone who has since left — there is no point assigning work to them.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Ignore who wrote the page. Useful when they have left.', 'mbm-live-feedback' ); ?>
 					</p>
 
 					<?php if ( ! MBM_LF_Options::get( 'motion_always_fallback' ) ) : ?>
@@ -520,7 +520,7 @@ class MBM_LF_Motion_Settings {
 		if ( ! $missing ) {
 			?>
 			<p class="description" style="color:#1d7a3c;">
-				<?php esc_html_e( 'Everyone here who can edit content has a matching Motion account.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Everyone who can edit content has a Motion account.', 'mbm-live-feedback' ); ?>
 			</p>
 			<?php
 			return;
@@ -658,7 +658,7 @@ class MBM_LF_Motion_Settings {
 		if ( ! $tasks->is_ready() ) {
 			?>
 			<p class="description" style="max-width:44rem;color:#996800;">
-				<?php esc_html_e( 'Choose a workspace and a project above and new comments will start becoming tasks.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Choose a workspace and project to start.', 'mbm-live-feedback' ); ?>
 			</p>
 			<?php
 			return;
@@ -668,7 +668,7 @@ class MBM_LF_Motion_Settings {
 		if ( ! $tasks->is_active() ) {
 			?>
 			<p class="description" style="max-width:44rem;color:#996800;">
-				<?php esc_html_e( 'Paused. Everything below is still set up, and nothing is being sent to Motion until you tick “Send feedback to Motion” above.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Paused. Nothing is being sent to Motion.', 'mbm-live-feedback' ); ?>
 			</p>
 			<?php
 			return;
@@ -678,7 +678,7 @@ class MBM_LF_Motion_Settings {
 		?>
 		<p class="description" style="max-width:44rem;">
 			<strong><?php esc_html_e( 'New comments become tasks in the project above.', 'mbm-live-feedback' ); ?></strong>
-			<?php esc_html_e( 'Replies are added to the same task. Marking a comment done moves its task to finished, and reopening it moves it back. A comment’s priority is copied across too.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Replies, priority and resolving all follow.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<p class="description" style="max-width:44rem;">
@@ -722,7 +722,7 @@ class MBM_LF_Motion_Settings {
 
 		<?php if ( ! defined( 'DISABLE_WP_CRON' ) || ! DISABLE_WP_CRON ) : ?>
 			<p class="description" style="max-width:44rem;">
-				<?php esc_html_e( 'Sending happens in the background, shortly after a comment arrives. On a quiet site that waits for the next visitor, so a real server cron makes it prompt.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Feedback reaches Motion within a few minutes.', 'mbm-live-feedback' ); ?>
 			</p>
 		<?php endif; ?>
 		<?php

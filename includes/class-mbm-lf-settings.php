@@ -297,13 +297,13 @@ class MBM_LF_Settings {
 						value="<?php echo esc_attr( (string) MBM_LF_Options::get( 'default_markup_id' ) ); ?>"
 					>
 					<p class="description">
-						<?php esc_html_e( 'Filled in for you. Only change it if you already have a MarkUp.io entry you would rather collect this site’s feedback in — clear it and a new one will be made.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Clear it and a new one is made.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
 			<tr>
 				<th scope="row">
-					<label for="mbm-lf-capability"><?php esc_html_e( 'Required permission', 'mbm-live-feedback' ); ?></label>
+					<label for="mbm-lf-capability"><?php esc_html_e( 'Permission', 'mbm-live-feedback' ); ?></label>
 				</th>
 				<td>
 					<input
@@ -314,7 +314,7 @@ class MBM_LF_Settings {
 						value="<?php echo esc_attr( $capability ); ?>"
 					>
 					<p class="description">
-						<?php esc_html_e( 'Only applies when “People who can edit content” is selected. Leave as edit_posts unless you know you need something different.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Used when “People who can edit content” is selected.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -407,11 +407,11 @@ class MBM_LF_Settings {
 			<h2 style="margin-top:0;"><?php esc_html_e( 'Set up', 'mbm-live-feedback' ); ?></h2>
 
 			<?php if ( ! $has_key ) : ?>
-				<p><?php esc_html_e( 'Save your API key below, then come back here and press the button. Everything else is handled for you.', 'mbm-live-feedback' ); ?></p>
+				<p><?php esc_html_e( 'Add your API key below, then press the button.', 'mbm-live-feedback' ); ?></p>
 			<?php elseif ( $provisioned ) : ?>
 				<p><?php esc_html_e( 'This site is registered with MarkUp.io and ready to collect feedback.', 'mbm-live-feedback' ); ?></p>
 			<?php else : ?>
-				<p><?php esc_html_e( 'Press the button and the plugin will register this site with MarkUp.io, create its own signing key, and read back everything it needs.', 'mbm-live-feedback' ); ?></p>
+				<p><?php esc_html_e( 'Press the button to register this site with MarkUp.io.', 'mbm-live-feedback' ); ?></p>
 			<?php endif; ?>
 
 			<?php $this->render_checklist(); ?>
@@ -437,10 +437,10 @@ class MBM_LF_Settings {
 			<?php if ( $public_local ) : ?>
 				<p class="description" style="color:#996800;">
 					<strong><?php esc_html_e( 'This site is not reachable from the internet yet.', 'mbm-live-feedback' ); ?></strong>
-					<?php esc_html_e( 'MarkUp.io loads each page itself when setting it up, so pages on this address cannot be set up automatically — it will refuse with “URL did not resolve”. Connecting your account works fine, and everything will start working once the site is live at a public address.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'MarkUp.io loads each page itself, so pages cannot be set up until this site is live at a public address. Connecting your account works now.', 'mbm-live-feedback' ); ?>
 				</p>
 				<p class="description" style="color:#996800;">
-					<?php esc_html_e( 'To try things out before then, create an entry in MarkUp.io against any public address and paste its ID into the site-wide field below.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'To try it now, paste an existing MarkUp.io ID into the shared list field under Advanced.', 'mbm-live-feedback' ); ?>
 				</p>
 			<?php endif; ?>
 
@@ -455,7 +455,7 @@ class MBM_LF_Settings {
 			</p>
 
 			<p class="description">
-				<?php esc_html_e( 'This cannot be changed afterwards — MarkUp.io does not allow editing a registration. If this site later moves to a different web address, run the setup again to register the new one.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'This cannot be changed afterwards. If the site moves to a new address, run setup again.', 'mbm-live-feedback' ); ?>
 			</p>
 		</div>
 		<?php
@@ -544,9 +544,6 @@ class MBM_LF_Settings {
 						<input type="checkbox" name="enabled" value="1" <?php checked( $enabled ); ?>>
 						<?php esc_html_e( 'Show the feedback bar on this site', 'mbm-live-feedback' ); ?>
 					</label>
-					<p class="description">
-						<?php esc_html_e( 'Untick to switch it off everywhere without losing your settings.', 'mbm-live-feedback' ); ?>
-					</p>
 				</td>
 			</tr>
 
@@ -570,7 +567,7 @@ class MBM_LF_Settings {
 						<?php endforeach; ?>
 					</fieldset>
 					<p class="description">
-						<?php esc_html_e( 'These get a Live Site Feedback panel in the editor where you paste the page’s MarkUp.io ID.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Only these can collect feedback.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -589,10 +586,10 @@ class MBM_LF_Settings {
 					</label>
 
 					<p class="description">
-						<?php esc_html_e( 'Recommended. Every comment from every page lands in a single list, so you can work through a client’s feedback in one go instead of hunting page by page. Pins still sit on the page they were left on.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'One list for the whole site, so you can work through a client’s feedback in one go.', 'mbm-live-feedback' ); ?>
 					</p>
 					<p class="description">
-						<?php esc_html_e( 'Untick it and every page keeps its own separate list instead. Useful if different people own different pages.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Untick for a separate list per page.', 'mbm-live-feedback' ); ?>
 					</p>
 
 					<?php $this->render_shared_list_state(); ?>
@@ -600,7 +597,7 @@ class MBM_LF_Settings {
 			</tr>
 
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Setting up', 'mbm-live-feedback' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'New lists', 'mbm-live-feedback' ); ?></th>
 				<td>
 					<label>
 						<input
@@ -609,10 +606,10 @@ class MBM_LF_Settings {
 							value="1"
 							<?php checked( (bool) MBM_LF_Options::get( 'auto_create_markups' ) ); ?>
 						>
-						<?php esc_html_e( 'Let the plugin set things up in MarkUp.io for me', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Create them in MarkUp.io automatically', 'mbm-live-feedback' ); ?>
 					</label>
 					<p class="description">
-						<?php esc_html_e( 'Leave this on and you never have to copy an ID by hand. Turn it off only if you want to paste in IDs yourself.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Off means pasting IDs in yourself.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -652,7 +649,7 @@ class MBM_LF_Settings {
 		if ( ! MBM_LF_Options::get( 'auto_create_markups' ) ) {
 			?>
 			<p class="description" style="color:#996800;">
-				<?php esc_html_e( 'No list yet. Either paste an ID below, or switch “Setting up” back on and the plugin will make one.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'No list yet. Turn on “New lists”, or paste an ID under Advanced.', 'mbm-live-feedback' ); ?>
 			</p>
 			<?php
 			return;
@@ -697,7 +694,7 @@ class MBM_LF_Settings {
 
 					<?php if ( 'everyone' === $mode ) : ?>
 						<p class="description" style="color:#996800;">
-							<?php esc_html_e( 'Everyone who visits your site can currently see the feedback bar and leave comments. Only leave this on while you are actively collecting public feedback.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'Anyone visiting your site can comment. Use this only while collecting public feedback.', 'mbm-live-feedback' ); ?>
 						</p>
 					<?php endif; ?>
 				</td>
@@ -723,7 +720,7 @@ class MBM_LF_Settings {
 						<?php endforeach; ?>
 					</fieldset>
 					<p class="description">
-						<?php esc_html_e( 'Only applies when “Only the roles I choose” is selected above.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Used when “Only the roles I choose” is selected.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -754,14 +751,14 @@ class MBM_LF_Settings {
 							<?php esc_html_e( 'People signed in to this site comment under their own name, with nothing extra to sign in to.', 'mbm-live-feedback' ); ?>
 						</p>
 						<p class="description">
-							<?php esc_html_e( 'They can leave comments, reply, and mark things as done. Deleting a comment is done in MarkUp.io itself.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'They can comment, reply and mark things done. Deleting happens in MarkUp.io.', 'mbm-live-feedback' ); ?>
 						</p>
 						<p class="description">
-							<?php esc_html_e( 'Their name and profile picture are shared with MarkUp.io so their comments are attributable. Your WordPress user IDs are not — each person is identified by a code that means nothing outside this site.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'Their name and picture are shared with MarkUp.io. Nothing else about their account is.', 'mbm-live-feedback' ); ?>
 						</p>
 					<?php else : ?>
 						<p style="margin-top:0;color:#996800;">
-							<?php esc_html_e( 'Everyone signs in through MarkUp.io at the moment. Run the setup above and your team will be recognised automatically instead.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'Everyone signs in through MarkUp.io until setup is finished.', 'mbm-live-feedback' ); ?>
 						</p>
 					<?php endif; ?>
 				</td>
@@ -771,10 +768,10 @@ class MBM_LF_Settings {
 				<th scope="row"><?php esc_html_e( 'Everyone else', 'mbm-live-feedback' ); ?></th>
 				<td>
 					<p style="margin-top:0;">
-						<?php esc_html_e( 'Visitors without an account here sign in through MarkUp.io, and get whatever your MarkUp.io workspace allows them.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Visitors without an account here sign in through MarkUp.io.', 'mbm-live-feedback' ); ?>
 					</p>
 					<p class="description">
-						<?php esc_html_e( 'Who sees the feedback bar at all is set under “Who can leave feedback” above.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Who sees the bar at all is set above.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -805,7 +802,7 @@ class MBM_LF_Settings {
 						<?php endforeach; ?>
 					</select>
 					<p class="description">
-						<?php esc_html_e( 'Visitors can drag the bar somewhere else if it gets in the way.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Visitors can drag it out of the way.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -889,11 +886,11 @@ class MBM_LF_Settings {
 		<h2><?php esc_html_e( 'Storing settings in wp-config.php instead', 'mbm-live-feedback' ); ?></h2>
 
 		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Anything saved on this screen is kept in your database, encrypted. If you would rather keep it out of the database altogether — which is the safer choice for a live site — add it to wp-config.php instead. Values there always win, and the matching field above becomes read-only.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Keys are stored encrypted in your database. Adding them to wp-config.php instead is safer on a live site. Values there always win, and the matching field becomes read-only.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Note that the encryption is tied to your site security keys. If those are ever regenerated, you will need to paste the API key in again.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Encryption is tied to your site security keys. Regenerate those and you will need to paste the API key again.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<pre style="background:#fff;border:1px solid #dcdcde;padding:1rem;max-width:44rem;overflow:auto;"><code>define( 'MBM_LF_API_KEY', '...' );
@@ -939,7 +936,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 		</p>
 
 		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Updates come straight from the plugin’s repository, so this site updates the same way as any other plugin — no downloading or uploading files.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Updates arrive on the Plugins screen like any other plugin.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<?php /* A link, not a form: this sits inside the settings form and HTML has no nested forms. */ ?>
