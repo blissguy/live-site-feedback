@@ -105,7 +105,33 @@ Keep the token as well: it costs nothing and still helps.
 
 ---
 
-## 6. Response shapes are inconsistent
+## 6. Webhook registrations cannot be scoped
+
+**What happens:** a registration takes only `url`, `workspaceId`, `eventTypes` and `enabled` —
+confirmed in the resource spec and against a real registration record, whose entire field list is
+`id, workspaceId, url, urlMd5, createdAt, modifiedAt, enabled, active, signingKey, eventType,
+eventTypes`. There is no markup, project or URL filter. One registration therefore receives every
+comment on every markup in the workspace.
+
+This is not a corner case. `markupId` is the only unit of scoping the product has — the SDK takes
+one and has no project or workspace option — and on a single-workspace plan every client site
+shares one workspace. Without filtering, each site hears about every other site's feedback and
+acts on it. That is exactly what happened: comments from two unrelated sites became tasks in a
+third site's Motion project.
+
+**What we do:** `MBM_LF_Threads::owns_delivery()` refuses any delivery whose markup this site does
+not own, before the payload has any effect at all. The markup id is the test; the page URL is only
+consulted when the delivery carries no markup id.
+
+**When fixed:** if registrations gain a markup or project filter, pass it at registration time and
+keep this check anyway — a filter set upstream is not visible from here, and the check is cheap.
+
+**How to check:** look for a scoping field in the create body for
+`/api-specs/resources/admin/webhook_registrations/`.
+
+---
+
+## 7. Response shapes are inconsistent
 
 Three separate inconsistencies, all handled but all worth removing if they are ever unified:
 
@@ -124,7 +150,7 @@ API uses ISO 8601 strings. `MBM_LF_Threads::to_timestamp()` accepts both.
 
 ---
 
-## 7. Motion's documentation is wrong in three places
+## 8. Motion's documentation is wrong in three places
 
 Not MarkUp.io, but the same problem and the same standing question — worth re-checking whenever
 Motion changes their API.

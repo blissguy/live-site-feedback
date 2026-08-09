@@ -113,6 +113,19 @@ class MBM_LF_Webhooks {
 			return new WP_REST_Response( [ 'ignored' => 'other workspace' ], 202 );
 		}
 
+		/*
+		 * The workspace check above is not a filter. Registrations cannot be
+		 * scoped to a markup — url, workspaceId, eventTypes and enabled are the
+		 * only fields there are — so every comment on every markup in the
+		 * workspace arrives here, including other sites'. Refuse those before
+		 * anything at all happens to them: no cache clearing, no scheduled
+		 * fetch, and above all no action fired, so nothing downstream can treat
+		 * another site's feedback as ours.
+		 */
+		if ( ! mbm_lf_threads()->owns_delivery( $body ) ) {
+			return new WP_REST_Response( [ 'ignored' => 'other markup' ], 202 );
+		}
+
 		$type = isset( $body['type'] ) ? sanitize_key( $body['type'] ) : '';
 
 		/*

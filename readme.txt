@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.11.0
+Stable tag: 0.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,10 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.12.0 =
+* Fixed: feedback left on other sites in the same MarkUp.io workspace could turn into tasks in this site's Motion project. Only comments on pages of this site are sent now.
+* New: you can pause the Motion integration without removing your API key or losing any of its settings.
 
 = 0.11.0 =
 * New setting: choose the status new feedback arrives in, so tasks land in the column your team picks work up from instead of Motion's default.

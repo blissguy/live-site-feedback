@@ -336,6 +336,102 @@ class MBM_LF_Threads {
 	 *
 	 * @return string[]
 	 */
+	/**
+	 * Every markup this site has ever created.
+	 *
+	 * Deliberately not the same question as markup_ids(). That one answers
+	 * "where should I read threads from right now", which follows the shared
+	 * list setting. This one answers "is this ours", and a markup does not stop
+	 * being ours because the setting changed after it was made — a site that
+	 * switched to a shared list still owns the per-page markups it created
+	 * before. Filtering on the narrower list would silently discard real
+	 * feedback, which is a worse failure than the leak it is guarding against,
+	 * because nobody notices it.
+	 *
+	 * @return string[]
+	 */
+	public function owned_markup_ids() {
+		static $cache = null;
+
+		if ( null !== $cache ) {
+			return $cache;
+		}
+
+		global $wpdb;
+
+		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare(
+				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value != ''",
+				MBM_LF_Post_Meta::META_MARKUP_ID
+			)
+		);
+
+		$ids[] = (string) MBM_LF_Options::get( 'default_markup_id' );
+
+		/**
+		 * Filters the markups this site claims as its own.
+		 *
+		 * The counterpart to `mbm_lf_markup_id`. Anything substituting a markup
+		 * there has to declare it here too, or its feedback is refused as
+		 * another site's — silently, which is the worst way to find out.
+		 *
+		 * @param string[] $ids Markup ids.
+		 */
+		$ids = (array) apply_filters( 'mbm_lf_owned_markup_ids', $ids );
+
+		$cache = array_values( array_unique( array_filter( array_map( 'strval', $ids ) ) ) );
+
+		return $cache;
+	}
+
+	/**
+	 * Whether a webhook delivery is about this site at all.
+	 *
+	 * MarkUp.io webhook registrations cannot be scoped: the only fields are
+	 * url, workspaceId, eventTypes and enabled, so one registration receives
+	 * every comment on every markup in the workspace. On a plan with a single
+	 * workspace that means one site hears about every other site's feedback,
+	 * and without this check it would act on it. Confirmed against the docs and
+	 * against a real registration record.
+	 *
+	 * The markup id is the exact answer and is a documented field. The page URL
+	 * is only consulted when there is no markup id at all — a delivery naming a
+	 * markup that is not ours is refused outright, even if it happens to point
+	 * at our domain, because we have no way to map it to a page.
+	 *
+	 * @param array $body The delivery.
+	 * @return bool
+	 */
+	public function owns_delivery( $body ) {
+		if ( ! is_array( $body ) ) {
+			return false;
+		}
+
+		$markup_id = isset( $body['data']['markup']['id'] ) ? (string) $body['data']['markup']['id'] : '';
+
+		if ( '' !== $markup_id ) {
+			return in_array( $markup_id, $this->owned_markup_ids(), true );
+		}
+
+		$comment = isset( $body['data']['comment'] ) && is_array( $body['data']['comment'] ) ? $body['data']['comment'] : [];
+		$url     = (string) (
+			$body['data']['markup']['webpageUrl']
+				?? $comment['location']['canonicalUrl']
+				?? $comment['location']['originalUrl']
+				?? ''
+		);
+
+		if ( '' === $url ) {
+			// Nothing identifies it. Refusing is the safe half of the guess.
+			return false;
+		}
+
+		$theirs = wp_parse_url( $url, PHP_URL_HOST );
+		$ours   = wp_parse_url( home_url(), PHP_URL_HOST );
+
+		return '' !== (string) $theirs && strtolower( (string) $theirs ) === strtolower( (string) $ours );
+	}
+
 	public function markup_ids() {
 		if ( MBM_LF_Options::get( 'shared_thread' ) ) {
 			$shared = (string) MBM_LF_Options::get( 'default_markup_id' );

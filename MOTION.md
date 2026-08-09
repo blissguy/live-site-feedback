@@ -406,8 +406,47 @@ Two things this had to get right:
 Verified end to end against the live workspace: `status: "Needs Dev"` → **201**, task returns
 `Needs Dev`. Both probe tasks were deleted afterwards.
 
+**The integration has its own switch now**, separate from the API key. Having a key meant being
+switched on, so the only way to pause was to delete the key and lose every setting with it. The
+switch defaults to on, so adding a key still starts the integration; unticking it stops work being
+sent without disturbing anything else. Comments left while paused are not sent retrospectively —
+resuming would otherwise dump a backlog of stale tasks on somebody.
+
 Still to do in M4: per-page assignee override, labels, the parked-jobs list with retry. Each is
 shippable on its own.
+
+---
+
+## 12. Other sites' feedback was becoming our tasks
+
+Found in use, 2026-08-09: a Motion project set up for one site was collecting tasks from two other
+sites entirely — 16 tasks, of which only 5 belonged to the site that created them.
+
+**Cause.** MarkUp.io webhook registrations cannot be scoped to a markup; the only fields are `url`,
+`workspaceId`, `eventTypes` and `enabled`. One registration hears every comment in the workspace.
+Our webhook checked the workspace — which passes, because it is the same workspace — and the task
+worker resolved the page with `url_to_postid()`, got `0` for a page belonging to another site, and
+treated `0` as "page unknown" rather than "not ours". A soft fallback in a place that needed a
+hard boundary.
+
+**Why nothing looked wrong.** The reading path is scoped and the writing path was not.
+`MBM_LF_Threads::all()` asks per markup this site owns and showed 3 threads, all genuine, the
+entire time 90 foreign threads were being linked to tasks.
+
+**The fix.** `owns_delivery()`, applied at the webhook before the payload has any effect —
+no cache clearing, no scheduled fetch, and no action fired, so nothing downstream can see another
+site's feedback at all. Checked again in `on_feedback()`, because that is a public action anything
+can fire.
+
+**The part that nearly went wrong.** The obvious ownership test is `markup_ids()`, which already
+exists. It is the wrong list: it follows the shared-list setting, so on a site using a shared list
+it returns one markup and ignores the per-page markups recorded before the switch. Filtering on it
+would have discarded real feedback — trading a leak for silent data loss, which is worse, because
+a leak is visible and lost feedback is not. `owned_markup_ids()` is the union of both and does not
+care which mode is current.
+
+**Single workspace is not optional.** Their plan allows one, so separating clients by workspace
+was never available. The markup filter is the only boundary that exists.
 
 ---
 

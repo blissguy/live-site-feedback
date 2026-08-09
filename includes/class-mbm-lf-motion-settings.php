@@ -53,6 +53,7 @@ class MBM_LF_Motion_Settings {
 			?>
 
 			<?php if ( $connected ) : ?>
+				<?php $this->enabled_row(); ?>
 				<?php $this->workspace_row(); ?>
 				<?php $this->project_row(); ?>
 				<?php $this->status_row(); ?>
@@ -176,6 +177,33 @@ class MBM_LF_Motion_Settings {
 						<?php esc_html_e( 'Save after changing this and the project list below will follow.', 'mbm-live-feedback' ); ?>
 					</p>
 				<?php endif; ?>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * The master switch.
+	 */
+	private function enabled_row() {
+		if ( ! mbm_lf_motion()->has_key() ) {
+			return;
+		}
+
+		$on = (bool) MBM_LF_Options::get( 'motion_enabled' );
+		?>
+		<tr>
+			<th scope="row"><?php esc_html_e( 'Send feedback to Motion', 'mbm-live-feedback' ); ?></th>
+			<td>
+				<?php /* Marks the control as present. Without it an unchecked box and an unrendered one look identical on save. */ ?>
+				<input type="hidden" name="motion_enabled_shown" value="1" />
+				<label>
+					<input type="checkbox" name="motion_enabled" value="1" <?php checked( $on ); ?> />
+					<?php esc_html_e( 'Turn new feedback into Motion tasks', 'mbm-live-feedback' ); ?>
+				</label>
+				<p class="description">
+					<?php esc_html_e( 'Switch this off to pause the integration without removing your key or losing any of the settings below. While it is off, comments are still collected here — they simply do not reach Motion, and comments left during the pause are not sent retrospectively when you switch it back on.', 'mbm-live-feedback' ); ?>
+				</p>
 			</td>
 		</tr>
 		<?php
@@ -456,6 +484,16 @@ class MBM_LF_Motion_Settings {
 				'motion_new_status'       => $status,
 			]
 		);
+
+		/*
+		 * Only when the switch was actually on screen. An unchecked box sends
+		 * nothing, and so does a form that never showed one — on the first save
+		 * after adding a key, that would read as "switch it off" and the
+		 * integration would arrive dead.
+		 */
+		if ( ! empty( $raw['motion_enabled_shown'] ) ) {
+			MBM_LF_Options::update( [ 'motion_enabled' => ! empty( $raw['motion_enabled'] ) ] );
+		}
 	}
 
 	/**
@@ -482,12 +520,22 @@ class MBM_LF_Motion_Settings {
 	 * and silently parked jobs are just data loss with extra steps.
 	 */
 	private function render_queue() {
-		$ready = ( new MBM_LF_Motion_Tasks() )->is_ready();
+		$tasks = new MBM_LF_Motion_Tasks();
 
-		if ( ! $ready ) {
+		if ( ! $tasks->is_ready() ) {
 			?>
 			<p class="description" style="max-width:44rem;color:#996800;">
 				<?php esc_html_e( 'Choose a workspace and a project above and new comments will start becoming tasks.', 'mbm-live-feedback' ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		// Set up but switched off. Saying nothing here would look like a fault.
+		if ( ! $tasks->is_active() ) {
+			?>
+			<p class="description" style="max-width:44rem;color:#996800;">
+				<?php esc_html_e( 'Paused. Everything below is still set up, and nothing is being sent to Motion until you tick “Send feedback to Motion” above.', 'mbm-live-feedback' ); ?>
 			</p>
 			<?php
 			return;

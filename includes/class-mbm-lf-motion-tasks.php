@@ -46,6 +46,20 @@ class MBM_LF_Motion_Tasks {
 			&& '' !== (string) MBM_LF_Options::get( 'motion_project_id' );
 	}
 
+	/**
+	 * Whether we should actually be sending anything right now.
+	 *
+	 * Separate from is_ready() on purpose. Configured-but-switched-off and
+	 * not-configured-yet are different situations and the settings screen says
+	 * different things about them; collapsing them would have it tell somebody
+	 * to choose a workspace they had already chosen.
+	 *
+	 * @return bool
+	 */
+	public function is_active() {
+		return $this->is_ready() && (bool) MBM_LF_Options::get( 'motion_enabled' );
+	}
+
 	/* ---------------------------------------------------------------------
 	 * Taking work in
 	 * ------------------------------------------------------------------ */
@@ -57,7 +71,18 @@ class MBM_LF_Motion_Tasks {
 	 * @param array  $body The delivery.
 	 */
 	public function on_feedback( $type, $body ) {
-		if ( ! $this->is_ready() ) {
+		if ( ! $this->is_active() ) {
+			return;
+		}
+
+		/*
+		 * The webhook refuses other sites' deliveries before firing this, so
+		 * reaching here with someone else's feedback should be impossible. It
+		 * is checked again anyway: this is a public action any code can fire,
+		 * and the cost of being wrong is another site's comments appearing in
+		 * this site's task board.
+		 */
+		if ( ! mbm_lf_threads()->owns_delivery( $body ) ) {
 			return;
 		}
 
@@ -135,7 +160,7 @@ class MBM_LF_Motion_Tasks {
 	 * Work through the queue.
 	 */
 	public function drain() {
-		if ( ! $this->is_ready() ) {
+		if ( ! $this->is_active() ) {
 			return;
 		}
 
@@ -179,7 +204,7 @@ class MBM_LF_Motion_Tasks {
 			return;
 		}
 
-		if ( ! $this->is_ready() || get_transient( 'mbm_lf_motion_nudged' ) ) {
+		if ( ! $this->is_active() || get_transient( 'mbm_lf_motion_nudged' ) ) {
 			return;
 		}
 
