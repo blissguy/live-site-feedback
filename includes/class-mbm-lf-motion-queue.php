@@ -82,7 +82,7 @@ class MBM_LF_Motion_Queue {
 		$collate = $wpdb->get_charset_collate();
 
 		dbDelta(
-			"CREATE TABLE {$table} (
+			"CREATE TABLE `{$table}` (
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				thread_id varchar(64) NOT NULL DEFAULT '',
 				action varchar(32) NOT NULL DEFAULT '',
@@ -109,7 +109,7 @@ class MBM_LF_Motion_Queue {
 
 		$table = self::table();
 
-		$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 
 		delete_option( self::SCHEMA_OPTION );
 		wp_clear_scheduled_hook( self::CRON_HOOK );
@@ -137,9 +137,9 @@ class MBM_LF_Motion_Queue {
 
 		$table = self::table();
 
-		$existing = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$existing = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			$wpdb->prepare(
-				"SELECT id FROM {$table} WHERE thread_id = %s AND action = %s AND status = 'pending' LIMIT 1",
+				"SELECT id FROM `{$table}` WHERE thread_id = %s AND action = %s AND status = 'pending' LIMIT 1",
 				$thread_id,
 				$action
 			)
@@ -192,9 +192,9 @@ class MBM_LF_Motion_Queue {
 
 		$table = self::table();
 
-		return (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE status = 'pending' AND available_at <= %s ORDER BY id ASC LIMIT %d",
+				"SELECT * FROM `{$table}` WHERE status = 'pending' AND available_at <= %s ORDER BY id ASC LIMIT %d",
 				current_time( 'mysql', true ),
 				max( 1, (int) $limit )
 			),
@@ -273,9 +273,11 @@ class MBM_LF_Motion_Queue {
 	public static function park_all( $message ) {
 		global $wpdb;
 
-		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$table = self::table();
+
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . " SET status = 'parked', last_error = %s WHERE status = 'pending'",
+				"UPDATE `{$table}` SET status = 'parked', last_error = %s WHERE status = 'pending'",
 				$message
 			)
 		);
@@ -298,13 +300,15 @@ class MBM_LF_Motion_Queue {
 	public static function parked( $limit = 50 ) {
 		global $wpdb;
 
+		$table = self::table();
+
 		if ( (int) get_option( self::SCHEMA_OPTION ) !== self::SCHEMA_VERSION ) {
 			return [];
 		}
 
-		return (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			$wpdb->prepare(
-				'SELECT id, action, thread_id, attempts, last_error, payload, available_at FROM ' . self::table() . " WHERE status = 'parked' ORDER BY id DESC LIMIT %d",
+				"SELECT id, action, thread_id, attempts, last_error, payload, available_at FROM `{$table}` WHERE status = 'parked' ORDER BY id DESC LIMIT %d",
 				max( 1, (int) $limit )
 			),
 			ARRAY_A
@@ -320,9 +324,11 @@ class MBM_LF_Motion_Queue {
 	public static function retry_one( $id ) {
 		global $wpdb;
 
-		$changed = (int) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$table = self::table();
+
+		$changed = (int) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . " SET status = 'pending', attempts = 0, available_at = %s WHERE id = %d AND status = 'parked'",
+				"UPDATE `{$table}` SET status = 'pending', attempts = 0, available_at = %s WHERE id = %d AND status = 'parked'",
 				current_time( 'mysql', true ),
 				(int) $id
 			)
@@ -360,9 +366,11 @@ class MBM_LF_Motion_Queue {
 	public static function retry_parked() {
 		global $wpdb;
 
-		$count = (int) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$table = self::table();
+
+		$count = (int) $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . " SET status = 'pending', attempts = 0, available_at = %s WHERE status = 'parked'",
+				"UPDATE `{$table}` SET status = 'pending', attempts = 0, available_at = %s WHERE status = 'parked'",
 				current_time( 'mysql', true )
 			)
 		);
@@ -431,8 +439,8 @@ class MBM_LF_Motion_Queue {
 
 		$table = self::table();
 
-		$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			"SELECT status, COUNT(*) AS total FROM {$table} GROUP BY status",
+		$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
+			"SELECT status, COUNT(*) AS total FROM `{$table}` GROUP BY status",
 			ARRAY_A
 		);
 
@@ -445,14 +453,14 @@ class MBM_LF_Motion_Queue {
 			$counts[ $row['status'] ] = (int) $row['total'];
 		}
 
-		$errors = (array) $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			"SELECT DISTINCT last_error FROM {$table} WHERE status = 'parked' AND last_error <> '' LIMIT 3"
+		$errors = (array) $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
+			"SELECT DISTINCT last_error FROM `{$table}` WHERE status = 'parked' AND last_error <> '' LIMIT 3"
 		);
 
 		return [
 			'pending' => $counts['pending'],
 			'parked'  => $counts['parked'],
-			'next'    => (string) $wpdb->get_var( "SELECT MIN(available_at) FROM {$table} WHERE status = 'pending'" ), // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			'next'    => (string) $wpdb->get_var( "SELECT MIN(available_at) FROM `{$table}` WHERE status = 'pending'" ), // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and SQL has no placeholder for an identifier.
 			'errors'  => $errors,
 		];
 	}
