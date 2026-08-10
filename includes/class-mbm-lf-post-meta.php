@@ -149,12 +149,6 @@ class MBM_LF_Post_Meta {
 		$shared    = (bool) MBM_LF_Options::get( 'shared_thread' );
 		?>
 
-		<?php if ( $shared ) : ?>
-			<p class="description" style="margin-top:0;">
-				<?php esc_html_e( 'All feedback for this site goes to one list. Nothing to set up here.', 'mbm-live-feedback' ); ?>
-			</p>
-		<?php endif; ?>
-
 		<p>
 			<label>
 				<input type="checkbox" name="mbm_lf_disabled" value="1" <?php checked( $disabled ); ?>>
