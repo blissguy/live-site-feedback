@@ -177,6 +177,44 @@ class MBM_LF_Options {
 	 *
 	 * @return array<string, string>
 	 */
+	/**
+	 * The permissions offered for the capability check.
+	 *
+	 * A ladder rather than a free-text box: the point is to pick how far down
+	 * the roles feedback reaches, and typing a capability by hand is a way to
+	 * silently switch the bar off for everybody.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function capability_choices() {
+		$choices = [
+			'read'              => __( 'Anyone signed in', 'mbm-live-feedback' ),
+			'edit_posts'        => __( 'Contributors and above (recommended)', 'mbm-live-feedback' ),
+			'publish_posts'     => __( 'Authors and above', 'mbm-live-feedback' ),
+			'edit_others_posts' => __( 'Editors and above', 'mbm-live-feedback' ),
+			'manage_options'    => __( 'Administrators only', 'mbm-live-feedback' ),
+		];
+
+		/*
+		 * Whatever is already stored stays selectable even when it is not one
+		 * of these. A site set up by hand, or by a filter, must not have its
+		 * choice quietly replaced the next time somebody saves an unrelated
+		 * setting.
+		 */
+		$current = (string) self::get( 'capability' );
+
+		if ( '' !== $current && ! isset( $choices[ $current ] ) ) {
+			$choices[ $current ] = $current;
+		}
+
+		/**
+		 * Filters the permissions offered.
+		 *
+		 * @param array<string, string> $choices Capability => label.
+		 */
+		return (array) apply_filters( 'mbm_lf_capability_choices', $choices );
+	}
+
 	public static function visibility_choices() {
 		return [
 			'capability' => __( 'People who can edit content (recommended)', 'mbm-live-feedback' ),

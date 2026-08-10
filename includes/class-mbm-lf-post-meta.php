@@ -151,7 +151,7 @@ class MBM_LF_Post_Meta {
 
 		<?php if ( $shared ) : ?>
 			<p class="description" style="margin-top:0;">
-				<?php esc_html_e( 'This site keeps all feedback in one list, so comments left here go there along with everything else. Nothing to set up per page.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'All feedback for this site goes to one list. Nothing to set up here.', 'mbm-live-feedback' ); ?>
 			</p>
 		<?php endif; ?>
 
@@ -323,12 +323,12 @@ class MBM_LF_Post_Meta {
 		<hr />
 		<p>
 			<label for="mbm-lf-motion-assignee">
-				<strong><?php esc_html_e( 'Send this page’s feedback to', 'mbm-live-feedback' ); ?></strong>
+				<strong><?php esc_html_e( 'Send feedback to', 'mbm-live-feedback' ); ?></strong>
 			</label>
 		</p>
 		<input type="hidden" name="mbm_lf_motion_assignee_shown" value="1" />
 		<select id="mbm-lf-motion-assignee" name="mbm_lf_motion_assignee" style="width:100%;">
-			<option value=""><?php esc_html_e( '— Whoever the settings decide —', 'mbm-live-feedback' ); ?></option>
+			<option value=""><?php esc_html_e( '— Settings default —', 'mbm-live-feedback' ); ?></option>
 			<?php foreach ( $people as $person ) : ?>
 				<option value="<?php echo esc_attr( $person['id'] ?? '' ); ?>" <?php selected( $current, $person['id'] ?? '' ); ?>>
 					<?php echo esc_html( $person['name'] ?? $person['email'] ?? $person['id'] ?? '' ); ?>
@@ -336,7 +336,7 @@ class MBM_LF_Post_Meta {
 			<?php endforeach; ?>
 		</select>
 		<p class="description">
-			<?php esc_html_e( 'Overrides everything else for this page, including the setting that sends all feedback to one person. Useful when one page belongs to somebody who did not write it.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Overrides the settings for this page.', 'mbm-live-feedback' ); ?>
 		</p>
 		<?php
 	}

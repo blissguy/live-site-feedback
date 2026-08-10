@@ -714,13 +714,13 @@ class MBM_LF_Settings {
 					<label for="mbm-lf-capability"><?php esc_html_e( 'Permission', 'mbm-live-feedback' ); ?></label>
 				</th>
 				<td>
-					<input
-						type="text"
-						class="regular-text code"
-						id="mbm-lf-capability"
-						name="capability"
-						value="<?php echo esc_attr( $capability ); ?>"
-					>
+					<select id="mbm-lf-capability" name="capability">
+						<?php foreach ( MBM_LF_Options::capability_choices() as $value => $label ) : ?>
+							<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $capability, $value ); ?>>
+								<?php echo esc_html( $label ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
 					<p class="description">
 						<?php esc_html_e( 'Used when “People who can edit content” is selected.', 'mbm-live-feedback' ); ?>
 					</p>
@@ -1189,7 +1189,9 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			? sanitize_key( wp_unslash( $raw['capability'] ) )
 			: 'edit_posts';
 
-		if ( '' === $capability ) {
+		// Checked against the offered list, like every other choice here, so a
+		// tampered form cannot hand the bar to a permission nobody holds.
+		if ( ! array_key_exists( $capability, MBM_LF_Options::capability_choices() ) ) {
 			$capability = 'edit_posts';
 		}
 
