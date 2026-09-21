@@ -16,6 +16,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-credentials.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-options.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-post-meta.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-user-meta.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-markups.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-updater.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-mbm-lf-threads.php';
@@ -64,3 +65,7 @@ delete_option( MBM_LF_Motion_Tasks::LINKS );
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_MARKUP_ID );
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_DISABLED );
 delete_post_meta_by_key( MBM_LF_Markups::META_ERROR );
+
+// There is no delete_user_meta_by_key(), so this is the equivalent: the final
+// argument makes it match on key alone, across every user.
+delete_metadata( 'user', 0, MBM_LF_User_Meta::META_DISABLED, '', true );

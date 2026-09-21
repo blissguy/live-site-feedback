@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.15.1
+Stable tag: 0.16.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,12 @@ In your MarkUp.io account. This plugin connects your site to it and decides who 
 
 By default, no — everything goes into one list for the whole site, which is usually what you want when a client is reviewing. Pins still sit on the page they were left on. If you would rather each page had its own list, untick "Keep all feedback for this site in one list" on the settings screen.
 
+= Can I turn the feedback bar off for one person? =
+
+Yes. Open their profile under **Users** and untick **Show this person the feedback bar on the site**. Nothing loads for them after that — no bar, no pins, and they cannot leave comments. Only administrators see that tick box, so nobody can switch themselves back on.
+
+Everyone else is unaffected, and anything that person already wrote stays where it is.
+
 = Can visitors see the feedback bar? =
 
 No. By default only people who can edit posts see it, and you choose who that includes.
@@ -68,6 +74,10 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.16.0 =
+* You can now turn the feedback bar off for one person, on their profile under Users. Nothing loads for them at all.
+* Their profile also says so when the feedback bar was never going to show for that account anyway, and links to the setting that decides it.
 
 = 0.15.1 =
 * Internal tidy-up of the task queue's database code. No change to how anything behaves.

@@ -230,29 +230,14 @@ class MBM_LF_Frontend {
 	 * @return bool
 	 */
 	public function user_can_see() {
-		$mode = MBM_LF_Options::get( 'visibility' );
-		$can  = false;
+		$mode = (string) MBM_LF_Options::get( 'visibility' );
+		$user = wp_get_current_user();
+		$can  = self::settings_allow( $user, $mode );
 
-		switch ( $mode ) {
-			case 'everyone':
-				$can = true;
-				break;
-
-			case 'logged_in':
-				$can = is_user_logged_in();
-				break;
-
-			case 'roles':
-				$allowed = (array) MBM_LF_Options::get( 'roles' );
-				$user    = wp_get_current_user();
-				$can     = $user && $user->exists() && array_intersect( $allowed, (array) $user->roles );
-				break;
-
-			case 'capability':
-			default:
-				$capability = (string) MBM_LF_Options::get( 'capability' );
-				$can        = current_user_can( $capability ? $capability : 'edit_posts' );
-				break;
+		// An individual switched off on their profile is out, whatever the
+		// settings say. This is the narrower rule, so it goes last.
+		if ( $can && MBM_LF_User_Meta::is_disabled( $user->ID ) ) {
+			$can = false;
 		}
 
 		/**
@@ -262,6 +247,47 @@ class MBM_LF_Frontend {
 		 * @param string $mode The configured visibility mode.
 		 */
 		return (bool) apply_filters( 'mbm_lf_user_can_see', (bool) $can, $mode );
+	}
+
+	/**
+	 * Whether the site-wide visibility setting covers somebody.
+	 *
+	 * Takes a user rather than reading the current one so the profile screen
+	 * can ask the same question about the account being edited. It deliberately
+	 * ignores that account's own switch: this answers "is this person in the
+	 * audience", and the switch is what takes them back out of it.
+	 *
+	 * @param WP_User     $user The user to check. ID 0 for a logged-out visitor.
+	 * @param string|null $mode Visibility mode, or null to read the setting.
+	 * @return bool
+	 */
+	public static function settings_allow( $user, $mode = null ) {
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+
+		if ( null === $mode ) {
+			$mode = (string) MBM_LF_Options::get( 'visibility' );
+		}
+
+		switch ( $mode ) {
+			case 'everyone':
+				return true;
+
+			case 'logged_in':
+				return $user->exists();
+
+			case 'roles':
+				$allowed = (array) MBM_LF_Options::get( 'roles' );
+
+				return $user->exists() && (bool) array_intersect( $allowed, (array) $user->roles );
+
+			case 'capability':
+			default:
+				$capability = (string) MBM_LF_Options::get( 'capability' );
+
+				return user_can( $user, $capability ? $capability : 'edit_posts' );
+		}
 	}
 
 	/**
