@@ -6,12 +6,31 @@ fixable here. Each one says what to check, and what to change once it is fixed.
 Everything below was verified against the live API and the shipped SDK build, not inferred from
 documentation — in several cases the documentation says the opposite.
 
-Worth re-checking when **1.0.0 GA** ships, since the SDK is still `1.0.0-rc.1`.
+Last checked **2026-10-09**, against the docs MarkUp.io last updated on 2026-09-21 and SDK
+`1.0.0-rc.7`, the build the plugin loads from 0.18.0. Worth re-checking whenever the docs change
+and when **1.0.0 GA** ships.
 
 Where to look:
-- SDK build — https://registry.npmjs.org/@ceros-dev/markup-sdk (`dist-tags.latest`)
-- Docs — https://developer.markup.io/
-- Dashboard install snippet — the SDK page of your workspace
+- SDK builds: https://registry.npmjs.org/@ceros-dev/markup-sdk (`dist-tags.latest` is still
+  rc.1; `dist-tags.next` is the newest release candidate)
+- Each build's files and hashes: `https://sdk.markup.io/v<version>/manifest.json`
+- SDK README and types, which say more than the website: `README.md` and `dist/types/ui.d.ts` in
+  the npm package
+- Docs: https://developer.markup.io/sdk/ and https://developer.markup.io/api-specs/
+- Dashboard install snippet: the SDK page of your workspace
+
+| # | Issue | Status on 2026-10-09 |
+| --- | --- | --- |
+| 1 | The advertised CDN URL doesn't exist | Open. No stable release yet. |
+| 2 | Comments had no screenshots | Fixed in rc.4, as a plugin. Used from 0.18.0. |
+| 3 | The documented header broke `/auth/exchange` | Fixed upstream. |
+| 4 | `markupRole` was ignored | Fixed upstream. Broke reviewers until 0.17.1. |
+| 5 | Deliveries aren't signed | Open as far as we know. Not re-tested since July. |
+| 6 | Registrations can't be scoped | Open. Confirmed by the 2026-09-21 docs. |
+| 7 | Response shapes are inconsistent | Open. |
+| 8 | Motion's docs are wrong | Motion, not MarkUp.io. Not re-checked. |
+| 9 | Deliveries go missing silently | Open. Worked around from 0.17.0. |
+| 10 | The thread list hides resolved threads | Open. The default is still undocumented. |
 
 ---
 
@@ -101,7 +120,13 @@ content or cause an outbound request.
 **When fixed:** verify the signature in `MBM_LF_Webhooks::check_token()` alongside the URL token.
 Keep the token as well: it costs nothing and still helps.
 
-**How to check:** capture a delivery and look for a signature header.
+**Since then:** the 2026-09-21 docs add `POST /webhook-registrations/:id/refresh-signing-key`, so
+the key is meant for something, but the webhooks page still says nothing about how a delivery is
+signed or how to verify one. Not re-tested: the access log shows that a delivery arrived, not its
+headers.
+
+**How to check:** capture a delivery's headers (a temporary log in `MBM_LF_Webhooks::handle()` is
+enough) and look for a signature header.
 
 ---
 
@@ -126,6 +151,13 @@ consulted when the delivery carries no markup id.
 **When fixed:** if registrations gain a markup or project filter, pass it at registration time and
 keep this check anyway — a filter set upstream is not visible from here, and the check is cheap.
 
+**Since then:** the 2026-09-21 docs confirm it. Create takes `url`, `workspaceId`, `eventTypes`
+and `enabled`; there is still no markup, project or URL filter. They also document an update,
+`POST /webhook-registrations/:id` (not PATCH) taking `url`, `eventTypes` and `enabled`, so a moved
+site could have its registration's address changed in place instead of deleted and recreated.
+Check and repair setup still creates and deletes; that works, and keeps the old registration
+untouched until the new one exists.
+
 **How to check:** look for a scoping field in the create body for
 `/api-specs/resources/admin/webhook_registrations/`.
 
@@ -147,6 +179,11 @@ share a reader.
 
 Timestamps differ as well: threads report **milliseconds since the epoch**, while the rest of the
 API uses ISO 8601 strings. `MBM_LF_Threads::to_timestamp()` accepts both.
+
+The 2026-09-21 webhooks page still documents `CommentNotification` without `location` or
+`browserContext`: only `id`, timestamps, `resolved`, `firstMessage`, `appUrl`, `messageCount` and an
+optional `screenshot`. Real deliveries do carry `comment.location`, and `owns_delivery()` falls
+back to it.
 
 ---
 
@@ -183,7 +220,8 @@ while MarkUp.io kept sending.
 
 There is no delivery log, no retry report and no way to send a test delivery, so neither failure is
 visible from MarkUp.io's side either. Retries happen (three attempts over about three minutes
-were seen), then the delivery is gone.
+were seen), then the delivery is gone. The 2026-09-21 docs still say nothing about retries, sender
+addresses, user agent, redirects or delivery history.
 
 **What we do:** Motion no longer depends on deliveries. `MBM_LF_Motion_Watch` asks for every
 thread every five minutes and compares it with a small note of the last answer; a delivery just
@@ -207,6 +245,9 @@ so asking once only ever returns open threads. Asking for the others needs `reso
 `resolved=true` is refused with "resolved must be a boolean value". `limit` above 200 is refused,
 and paging uses `offset` against the returned `total`.
 
+The 2026-09-21 docs now list the parameters (`resolved`, `limit`, `offset`, `cursorId`, `order`,
+`viewMode`, `q` and `withThreadOrMessageId`) but still give no defaults and no maximum `limit`.
+
 **What we do:** `MBM_LF_Threads::fetch_all_raw()` asks twice, once per state, and pages through
 each.
 
@@ -219,17 +260,27 @@ each.
 
 ## Undocumented but useful
 
-Not bugs — just things worth knowing that the documentation does not mention.
+Not bugs, just things worth knowing that the documentation does not mention, or did not when they
+were found.
 
 - **Rate limits** come back from `GET /auth/config`: 1000 requests and 100 sign-ins per minute.
   The plugin stores them at setup rather than assuming.
 - **Installations cannot be edited.** No `PATCH` exists, so changing allowed origins means
-  creating a new installation and getting a new public key — hence one installation per
-  environment.
+  creating a new installation and getting a new public key, hence one installation per
+  environment. Still true on 2026-10-09: the docs only cover `GET /auth/config`, and
+  installations themselves aren't documented at all. Check and repair setup makes a new one when
+  the address changes.
 - **`allowedOrigins` is required** in practice even though the docs call it optional, and the
   "allow all origins" option silently restricts the installation to customer-JWT only.
-- **Undocumented endpoints** the SDK uses: `/auth/sdk-exchange` and `/auth/sdk-exchange/result`
-  (the sign-in polling pair), and `POST /markups/:id/read-only`.
+- **Endpoints the SDK uses** that weren't documented in July: `/auth/sdk-exchange` and
+  `/auth/sdk-exchange/result` (the sign-in polling pair), now documented under Feedback API
+  authentication; `POST /markups/:id/read-only`, not re-checked.
+- **Thread endpoints documented on 2026-09-21** that the plugin doesn't use yet:
+  `POST /threads/:id/resolve` and `/unresolve`, `POST /threads/:id/read`, and screenshot upload
+  and read. Threads also carry `read` and `unreadMessageCount`, both per caller. Called with the
+  API key, those report the key owner's state, not a reviewer's.
+- **A new event type,** `comment_screenshot_failed`, sits alongside the five the plugin registers
+  for. The plugin doesn't subscribe to it.
 - **An extra event** exists in the SDK types but not the docs: `comment:reply:delete`.
 - **A link straight to one comment** is `https://app.markup.io/markup/{markupId}/#thread/{threadId}`,
   the same form deliveries carry in `comment.appUrl`. On the site itself, adding
@@ -237,22 +288,18 @@ Not bugs — just things worth knowing that the documentation does not mention.
   documented from rc.7, and MarkUp.io's notification emails use it.
 - **A session can be bound to one markup** by putting `markupId` in the customer JWT. The exchange
   echoes it back, and the session is refused everywhere else.
-- **Every comment records the viewport it was left at.** `browserContext` on a thread carries
+- **Every comment records the browser it was left in.** `browserContext` on a thread carries
   `viewportWidth`/`viewportHeight` from `window.innerWidth`/`innerHeight`, read at the moment of
-  commenting — verified by a comment left at 425 × 956 against nine others at 1800 × 1043. It also
-  carries browser, version, os, osVersion, screen size and `platform`. None of it is documented,
-  and `browserContext` is absent from the documented `CommentNotification`, so a delivery may not
-  include it.
-- **Up to rc.5, `platform` was decided from the user agent, not the window.** From rc.6 the device
-  is decided by viewport width and re-evaluated as the window crosses a breakpoint, and the
-  `deviceScope` render option filters comments by it. Everything created earlier is filed as
-  desktop. The rest of this note describes the old builds. The bundle's
-  `e.mobile ? "mobile" : "desktop"`, falling back to `/Mobi|Android/i` on the user agent, returns
-  only those two values — never tablet, and never anything width-derived. Resizing a desktop
-  browser leaves it saying `desktop` forever, which is why MarkUp.io shows every SDK comment that
-  way. `deviceType`, the field that would drive a breakpoint label, appears exactly once in the
-  whole bundle and only in a helper that *reads* it — the SDK never sets one. Nothing here can
-  change either; we report the raw viewport ourselves instead.
+  commenting, plus browser, version, OS, screen size and `platform`. Found in July with a comment
+  left at 425 × 956 against nine others at 1800 × 1043; documented since, on the threads resource
+  and in the rc.7 README, which shows it in a panel behind each comment's device icon. Still
+  absent from the documented `CommentNotification`, so the plugin reads it from the thread.
+- **Up to rc.5 the device came from the user agent, not the window,** so every SDK comment was
+  filed as desktop and resizing changed nothing. From rc.6 it's decided by viewport width,
+  re-evaluated as the window crosses a breakpoint, and the `deviceScope` render option shows only
+  the reader's own device by default. Comments made before can't be refiled, so on learnwithvelo.com
+  everything before 0.18.0 is desktop and doesn't show on phones and tablets. Render with
+  `deviceScope: "all"` through `mbm_lf_render_options` to see everything everywhere.
 - **Motion labels arrive on the workspace**, as a flat array of strings under `labels`. There is no
   labels endpoint — `GET /v1/labels` is a 404. `POST /v1/tasks` takes them as plain strings and
   returns them as objects (`[{"name":"In Dev"}]`), and an unknown one is a **404 `Unknown workspace
