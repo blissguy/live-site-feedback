@@ -53,37 +53,38 @@ for `THREAD_SCREENSHOT` being *used* rather than merely defined.
 
 ---
 
-## 3. `POST /auth/exchange` — the documented auth header breaks it
+## 3. `POST /auth/exchange` — the documented auth header broke it (fixed upstream)
 
-**What happens:** the spec lists `Authorization: Bearer <API-KEY-SECRET>` as required. Sending it
-returns **401**. The endpoint authenticates by `publicKey` in the request body, with no auth
-header at all. Following the documentation is what fails.
+**What happened:** until at least July 2026 the spec listed `Authorization: Bearer <API-KEY-SECRET>`
+as required, and sending it returned **401**. The endpoint authenticated by `publicKey` in the
+request body.
 
-**What we do:** `MBM_LF_Api_Client::request()` takes a `no_auth` option, used only here. The
-exception is commented at the call site so nobody "corrects" it.
+**Now (re-tested 2026-10-09):** it answers 200 with or without the header. `publicKey` has moved
+out of the body: it must be a query parameter or an `X-Markup-Public-Key` header, or the answer is
+400 "publicKey is required".
 
-**When fixed:** if the documented behaviour ever becomes true, drop the `no_auth` argument from
-the exchange call. Do not do this speculatively — test first.
-
-**How to check:** send the exchange request with the header and see whether it still 401s.
+**What we do:** nothing. Only the SDK calls this endpoint, and it sends the key the way the API
+wants. Kept here because the `no_auth` option in `MBM_LF_Api_Client::request()` exists for it.
 
 ---
 
-## 4. The `markupRole` claim is ignored
+## 4. The `markupRole` claim was ignored (fixed upstream, and it mattered)
 
-**What happens:** sending `project:owner`, `project:viewer`, `project:contributor`, or omitting
-the claim entirely, all produce a `project:contributor` session. Everyone signed in via a
-customer JWT can comment and resolve; nobody can delete.
+**What happened:** until some point after 2026-10-03, sending `project:owner`, `project:viewer`,
+`project:contributor`, or omitting the claim all produced a `project:contributor` session.
 
-**What we do:** still send a role derived from WordPress capabilities, since it is documented and
-costs nothing. A role-mapping settings UI was built and **removed** — shipping a control that
-silently does nothing is worse than not offering one.
+**Now (re-tested 2026-10-09):** the claim is honored. Each role comes back exactly as sent, an
+omitted claim gives contributor, and any other value is refused with a 400, so sign-in fails.
 
-**When fixed:** `MBM_LF_Tokens::role_for()` already computes the right value, so honouring it
-would need no change. Only then is a settings UI worth reconsidering.
+**What it broke:** the plugin had always sent `project:viewer` to anyone who couldn't edit posts,
+on the reasoning that it was harmless while ignored. Once honored, reviewers with member accounts
+(learners on learnwithvelo.com) became read-only overnight, with nothing in WordPress to say so.
 
-**How to check:** mint a token claiming `project:owner`, exchange it, and read `markupRole` in
-the response.
+**What we do (0.17.1):** `MBM_LF_Tokens::default_role_for()` gives owner to people who can delete
+others' posts and contributor to everyone else. Only people the visibility setting lets see the
+bar get a token, so viewer is never a sensible default. `mbm_lf_user_role` can still choose it.
+
+**How to check:** mint a token with each claim, exchange it, and read `markupRole` in the response.
 
 ---
 

@@ -135,15 +135,14 @@ class MBM_LF_Tokens {
 	/**
 	 * Which MarkUp.io role to claim for a user.
 	 *
-	 * Note: MarkUp.io currently **ignores** this. Tested 2026-07-29 against a
-	 * real installation — sending project:owner, project:viewer,
-	 * project:contributor, or omitting the claim entirely all produce a
-	 * project:contributor session. Everyone signed in this way can comment and
-	 * mark threads resolved, and nobody can delete.
+	 * MarkUp.io honors this now. Until some point after 2026-10-03 it ignored
+	 * the claim and gave everyone project:contributor (tested 2026-07-29).
+	 * Re-tested 2026-10-09 against the live installation: owner, contributor
+	 * and viewer each come back exactly as sent, an omitted claim gives
+	 * contributor, and anything else is refused with a 400, so sign-in fails.
 	 *
-	 * The claim is documented as supported, so a correct value is still sent in
-	 * case that changes. Nothing in the plugin should promise control over it
-	 * while it has no effect.
+	 * That made the role decide whether someone can comment at all. See
+	 * default_role_for().
 	 *
 	 * @param WP_User $user User to check.
 	 * @return string One of self::ROLES.
@@ -159,16 +158,24 @@ class MBM_LF_Tokens {
 		 */
 		$role = (string) apply_filters( 'mbm_lf_user_role', $role, $user );
 
-		// Never let an unrecognised value through: MarkUp.io would quietly treat
-		// it as read-only, which looks like the plugin is broken.
+		// Never let an unrecognized value through: MarkUp.io refuses it outright,
+		// and the person can't sign in to the feedback bar at all.
 		return in_array( $role, self::ROLES, true ) ? $role : 'project:contributor';
 	}
 
 	/**
 	 * The role a user gets when nothing has been configured.
 	 *
-	 * Based on what they can already do in WordPress: someone trusted to delete
-	 * other people's posts is trusted to delete other people's comments.
+	 * Someone trusted to delete other people's posts is trusted to delete other
+	 * people's comments. Everybody else comments as a contributor.
+	 *
+	 * Never project:viewer by default. Only people the visibility setting lets
+	 * see the bar ever get a token, so everyone who reaches this was chosen to
+	 * give feedback. Viewer used to be the fallback for anyone who couldn't edit
+	 * posts, and once MarkUp.io started honoring the claim it quietly turned
+	 * reviewers with member accounts (learners, on learnwithvelo.com) into
+	 * read-only visitors. A site that genuinely wants read-only reviewers can
+	 * still say so through the mbm_lf_user_role filter.
 	 *
 	 * @param WP_User $user User to check.
 	 * @return string
@@ -178,11 +185,7 @@ class MBM_LF_Tokens {
 			return 'project:owner';
 		}
 
-		if ( user_can( $user, 'edit_posts' ) ) {
-			return 'project:contributor';
-		}
-
-		return 'project:viewer';
+		return 'project:contributor';
 	}
 
 	/**

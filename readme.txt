@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.17.0
+Stable tag: 0.17.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,9 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.17.1 =
+* Fixed: people without editing rights, such as members reviewing a course, could see comments but not leave them. MarkUp.io has started honoring the role the plugin sends, and this plugin sent "viewer" to anyone who couldn't edit posts. Everyone who can see the feedback bar now comments as a contributor; people who can manage others' posts can also delete comments.
 
 = 0.17.0 =
 * Motion no longer depends on MarkUp.io's notifications reaching the site. The site now checks for new comments, replies, resolves and priority changes every five minutes, and a notification just makes that happen sooner. Firewalls such as Cloudflare's Bot Fight Mode had been turning those notifications away without anyone knowing.
