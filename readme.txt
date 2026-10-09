@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.17.1
+Stable tag: 0.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,13 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.18.0 =
+* The feedback bar uses MarkUp.io's newer library (1.0.0-rc.7). Pins show a dot on comments you haven't opened yet, each comment shows an icon for the device it was left on, and every comment has a Copy link option.
+* Comments are now filed by device, decided by the width of the window. Someone on a phone or tablet only sees comments left at that size, so comments left before this update, which were all filed as desktop, don't show on smaller screens.
+* New setting on the Feedback bar tab: attach a screenshot of the spot to each new comment.
+* "View on page" on the Comments screen, and "View it on the page" in new Motion tasks, open the page with that comment already open.
+* When all feedback goes into one list, each sign-in is now limited to this site's list, so it can't be used to read another site's feedback in the same MarkUp.io workspace.
 
 = 0.17.1 =
 * Fixed: people without editing rights, such as members reviewing a course, could see comments but not leave them. MarkUp.io has started honoring the role the plugin sends, and this plugin sent "viewer" to anyone who couldn't edit posts. Everyone who can see the feedback bar now comments as a contributor; people who can manage others' posts can also delete comments.

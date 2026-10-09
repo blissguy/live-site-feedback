@@ -89,6 +89,22 @@ class MBM_LF_Tokens {
 			'markupRole' => $this->role_for( $user ),
 		];
 
+		/*
+		 * Lock the session to this site's list. Every client site shares one
+		 * MarkUp.io workspace, so an unbound session from this site could read
+		 * and comment on any other site's list too. Bound, MarkUp.io answers 403
+		 * for anything else (tested 2026-10-09: the exchange echoes the id back).
+		 *
+		 * Only for the shared list. With a list per page the library keeps one
+		 * session across pages within a tab, and a session bound to the first
+		 * page's list would be refused on the second.
+		 */
+		$shared = (string) MBM_LF_Options::get( 'default_markup_id' );
+
+		if ( MBM_LF_Options::get( 'shared_thread' ) && '' !== $shared ) {
+			$claims['markupId'] = $shared;
+		}
+
 		/**
 		 * Filters the claims placed in a feedback token.
 		 *

@@ -20,6 +20,11 @@ class MBM_LF_Frontend {
 	const HANDLE_SDK = 'mbm-lf-sdk';
 
 	/**
+	 * Script handle for the screenshot plugin.
+	 */
+	const HANDLE_SCREENSHOT = 'mbm-lf-sdk-screenshot';
+
+	/**
 	 * Script handle for our bootstrap.
 	 */
 	const HANDLE_BOOT = 'mbm-lf-feedback';
@@ -44,19 +49,31 @@ class MBM_LF_Frontend {
 
 		wp_enqueue_script( self::HANDLE_SDK, MBM_LF_SDK_URL, [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion
 
+		$deps       = [ self::HANDLE_SDK ];
+		$screenshot = (bool) MBM_LF_Options::get( 'screenshots' );
+
+		if ( $screenshot ) {
+			// After the library: the plugin attaches itself to it, and logs an
+			// error and does nothing if it arrives first.
+			wp_enqueue_script( self::HANDLE_SCREENSHOT, MBM_LF_SDK_SCREENSHOT_URL, [ self::HANDLE_SDK ], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion
+
+			$deps[] = self::HANDLE_SCREENSHOT;
+		}
+
 		wp_enqueue_script(
 			self::HANDLE_BOOT,
 			MBM_LF_URL . 'assets/js/feedback.js',
-			[ self::HANDLE_SDK ],
+			$deps,
 			MBM_LF_VERSION,
 			true
 		);
 
 		$config = [
-			'publicKey' => MBM_LF_Credentials::get( 'public_key' ),
-			'markupId'  => $markup_id,
-			'render'    => $this->render_options(),
-			'debug'     => $this->is_debug(),
+			'publicKey'  => MBM_LF_Credentials::get( 'public_key' ),
+			'markupId'   => $markup_id,
+			'render'     => $this->render_options(),
+			'debug'      => $this->is_debug(),
+			'screenshot' => $screenshot,
 		];
 
 		/*
@@ -89,13 +106,18 @@ class MBM_LF_Frontend {
 	 * @return string
 	 */
 	public function add_integrity_attributes( $tag, $handle ) {
-		if ( self::HANDLE_SDK !== $handle || '' === MBM_LF_SDK_SRI ) {
+		$hashes = [
+			self::HANDLE_SDK        => MBM_LF_SDK_SRI,
+			self::HANDLE_SCREENSHOT => MBM_LF_SDK_SCREENSHOT_SRI,
+		];
+
+		if ( empty( $hashes[ $handle ] ) ) {
 			return $tag;
 		}
 
 		return str_replace(
 			' src=',
-			' integrity="' . esc_attr( MBM_LF_SDK_SRI ) . '" crossorigin="anonymous" src=',
+			' integrity="' . esc_attr( $hashes[ $handle ] ) . '" crossorigin="anonymous" src=',
 			$tag
 		);
 	}

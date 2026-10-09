@@ -195,6 +195,8 @@ class MBM_LF_Motion_Tasks {
 
 		$post_id = $payload['page_url'] ? url_to_postid( $payload['page_url'] ) : 0;
 
+		$payload['thread_id'] = $thread_id;
+
 		$body = [
 			'name'        => $this->title( $payload, $post_id ),
 			'workspaceId' => (string) MBM_LF_Options::get( 'motion_workspace_id' ),
@@ -795,12 +797,29 @@ class MBM_LF_Motion_Tasks {
 			$lines[] = '';
 		}
 
+		// The page link opens the comment right where it was left, through the
+		// feedback bar; the MarkUp.io one is for whoever works from there.
+		$links   = [];
+		$on_page = MBM_LF_Threads::page_link( $where, (string) ( $payload['thread_id'] ?? '' ) );
+
+		if ( '' !== $on_page ) {
+			$links[] = sprintf(
+				'[%s](%s)',
+				__( 'View it on the page', 'mbm-live-feedback' ),
+				$on_page
+			);
+		}
+
 		if ( '' !== (string) $payload['app_url'] ) {
-			$lines[] = sprintf(
+			$links[] = sprintf(
 				'[%s](%s)',
 				__( 'Open the comment in MarkUp.io', 'mbm-live-feedback' ),
 				$payload['app_url']
 			);
+		}
+
+		if ( $links ) {
+			$lines[] = implode( ' · ', $links );
 		}
 
 		return trim( implode( "\n", $lines ) );

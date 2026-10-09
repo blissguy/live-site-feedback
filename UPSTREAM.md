@@ -17,39 +17,38 @@ Where to look:
 
 ## 1. The advertised CDN URL does not exist
 
-**What happens:** `https://sdk.markup.io/v1.0.0/markup-sdk-ui.min.js` returns 404 `NoSuchKey`.
-Only `1.0.0-rc.1` is published, and the install snippet the MarkUp.io dashboard generates points
-at the dead `v1.0.0` file. Anyone following it gets a silent no-op.
+**What happens:** `https://sdk.markup.io/v1.0.0/markup-sdk-ui.min.js` returns 404, and so do the
+`/latest/` and `/v1/` aliases the README describes, because there is no stable release yet. The
+README and the dashboard's install snippet both point at `/v1.0.0/`. Release candidates are
+published: `/next/` serves the newest (1.0.0-rc.7 on 2026-10-09).
 
-**What we do:** pin the exact working URL and its integrity hash in `mbm-live-feedback.php`.
-
-**When fixed:** update `MBM_LF_SDK_VERSION`, `MBM_LF_SDK_URL` and `MBM_LF_SDK_SRI` together.
-Recompute the hash — never reuse the old one:
+**What we do:** pin an exact release candidate in `mbm-live-feedback.php`, with its integrity hash.
+Since rc.7 every version folder has a `manifest.json` listing the sha384 of each file, so upgrading
+is: change `MBM_LF_SDK_VERSION` and both URLs, then copy both hashes from
+`https://sdk.markup.io/v<version>/manifest.json`. Recompute one to be sure:
 
 ```
 curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A
 ```
 
+**When fixed:** move to the stable `/v1.0.0/` files once they exist. Keep pinning an exact version.
+
 **How to check:** does `dist-tags.latest` on npm show a non-rc version, and does
-`https://sdk.markup.io/v<version>/markup-sdk-ui.min.js` return 200?
+`https://sdk.markup.io/v1.0.0/manifest.json` return 200?
 
 ---
 
-## 2. Comments have no screenshots
+## 2. Comments had no screenshots (fixed in rc.4, as a plugin)
 
-**What happens:** the SDK never captures one. `THREAD_SCREENSHOT` exists in the shipped bundle
-only as an unused value in an upload-purpose enum, and no rasterisation library is bundled. The
-API supports attaching one — `GET /threads/:id/screenshot-upload-policy`, upload to S3,
-`PUT /threads/:id/screenshot` — but the SDK never calls it.
+**What happened:** up to rc.3 the SDK never captured one.
 
-**What we do:** nothing. Building it ourselves would mean rasterising the page in the browser,
-which loses CDN-served images, web fonts and iframes, and there is no thread-created event to
-hang it off.
+**Now:** rc.4 added a screenshot plugin, `markup-sdk-plugin-screenshot.min.js`, published next to
+the main library. Loaded after it, it attaches `MarkUpSDK.plugins.screenshot()`, which is passed to
+`render({plugins: [...]})`. With `{auto: true}` it captures the clicked element when a pin is
+placed and attaches the PNG to the comment through the normal upload pipeline, so it arrives as an
+attachment on the first message rather than as the thread's own screenshot.
 
-**When fixed:** nothing to change — screenshots should simply start appearing.
-
-**How to check:** leave a comment and see whether a screenshot is attached. In the bundle, look
-for `THREAD_SCREENSHOT` being *used* rather than merely defined.
+**What we do (0.18.0):** a setting on the Feedback bar tab loads it in auto mode.
 
 ---
 
@@ -233,14 +232,21 @@ Not bugs — just things worth knowing that the documentation does not mention.
   (the sign-in polling pair), and `POST /markups/:id/read-only`.
 - **An extra event** exists in the SDK types but not the docs: `comment:reply:delete`.
 - **A link straight to one comment** is `https://app.markup.io/markup/{markupId}/#thread/{threadId}`,
-  the same form deliveries carry in `comment.appUrl`.
+  the same form deliveries carry in `comment.appUrl`. On the site itself, adding
+  `commentThread={threadId}` to the page's address makes the bar open that comment on load. This is
+  documented from rc.7, and MarkUp.io's notification emails use it.
+- **A session can be bound to one markup** by putting `markupId` in the customer JWT. The exchange
+  echoes it back, and the session is refused everywhere else.
 - **Every comment records the viewport it was left at.** `browserContext` on a thread carries
   `viewportWidth`/`viewportHeight` from `window.innerWidth`/`innerHeight`, read at the moment of
   commenting — verified by a comment left at 425 × 956 against nine others at 1800 × 1043. It also
   carries browser, version, os, osVersion, screen size and `platform`. None of it is documented,
   and `browserContext` is absent from the documented `CommentNotification`, so a delivery may not
   include it.
-- **`platform` is decided from the user agent, not the window.** The bundle's
+- **Up to rc.5, `platform` was decided from the user agent, not the window.** From rc.6 the device
+  is decided by viewport width and re-evaluated as the window crosses a breakpoint, and the
+  `deviceScope` render option filters comments by it. Everything created earlier is filed as
+  desktop. The rest of this note describes the old builds. The bundle's
   `e.mobile ? "mobile" : "desktop"`, falling back to `/Mobi|Android/i` on the user agent, returns
   only those two values — never tablet, and never anything width-derived. Resizing a desktop
   browser leaves it saying `desktop` forever, which is why MarkUp.io shows every SDK comment that

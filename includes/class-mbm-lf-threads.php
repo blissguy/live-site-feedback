@@ -558,6 +558,8 @@ class MBM_LF_Threads {
 			}
 		}
 
+		$post_id = $url ? url_to_postid( $url ) : 0;
+
 		return [
 			'id'        => (string) $thread['id'],
 			'markup_id' => (string) $markup_id,
@@ -568,10 +570,31 @@ class MBM_LF_Threads {
 			'replies'   => max( 0, count( $messages ) - 1 ),
 			'activity'  => $activity,
 			'url'       => $url,
-			'post_id'   => $url ? url_to_postid( $url ) : 0,
+			'post_id'   => $post_id,
+			'page_link' => self::page_link( $post_id ? (string) get_permalink( $post_id ) : $url, (string) $thread['id'] ),
 			// Straight to the comment, in the same form MarkUp.io's own links use.
 			'app_url'   => 'https://app.markup.io/markup/' . rawurlencode( (string) $markup_id ) . '/#thread/' . rawurlencode( (string) $thread['id'] ),
 		];
+	}
+
+	/**
+	 * The page a comment was left on, opened at that comment.
+	 *
+	 * The feedback bar reads `commentThread` when it loads: it scrolls to the
+	 * pin, selects it and opens the thread, the same as clicking it. MarkUp.io's
+	 * own notification emails link the same way. Anyone who can't see the bar
+	 * just gets the page.
+	 *
+	 * @param string $url       Page address.
+	 * @param string $thread_id Thread id.
+	 * @return string Empty when there is no page to link to.
+	 */
+	public static function page_link( $url, $thread_id ) {
+		if ( '' === (string) $url || '' === (string) $thread_id ) {
+			return '';
+		}
+
+		return add_query_arg( 'commentThread', rawurlencode( (string) $thread_id ), (string) $url );
 	}
 
 	/**

@@ -105,7 +105,20 @@
 		} );
 	}
 
-	Promise.resolve( feedback.render( config.render || {} ) )
+	var render = config.render || {};
+
+	// Screenshots come from a separate plugin file, loaded only when switched
+	// on. Auto mode captures the clicked element as soon as a pin is placed;
+	// the button to take another stays in the comment box either way.
+	if ( config.screenshot ) {
+		if ( window.MarkUpSDK.plugins && typeof window.MarkUpSDK.plugins.screenshot === 'function' ) {
+			render.plugins = [ window.MarkUpSDK.plugins.screenshot( { auto: true } ) ];
+		} else {
+			log( 'The screenshot plugin did not load, so comments go without one.' );
+		}
+	}
+
+	Promise.resolve( feedback.render( render ) )
 		.then( function () {
 			log( 'Ready.' );
 		} )

@@ -60,6 +60,7 @@ class MBM_LF_Options {
 			'motion_enabled'    => true,
 			'motion_labels'     => [],
 			'motion_last_check' => [],
+			'screenshots'       => false,
 			'motion_paused_by_repair' => false,
 			'connected_origin'  => '',
 			'lists_by_origin'   => [],

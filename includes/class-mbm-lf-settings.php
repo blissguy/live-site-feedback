@@ -151,6 +151,10 @@ class MBM_LF_Settings {
 					<h2 class="title"><?php esc_html_e( 'Appearance', 'mbm-live-feedback' ); ?></h2>
 
 					<?php $this->render_appearance_fields(); ?>
+
+					<h2 class="title"><?php esc_html_e( 'New comments', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_comment_fields(); ?>
 				</div>
 
 				<div class="mbm-lf-panel" data-panel="people">
@@ -890,6 +894,30 @@ class MBM_LF_Settings {
 	}
 
 	/**
+	 * What gets attached to a new comment.
+	 */
+	private function render_comment_fields() {
+		?>
+		<table class="form-table" role="presentation">
+			<tbody>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Screenshots', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="screenshots" value="1" <?php checked( (bool) MBM_LF_Options::get( 'screenshots' ) ); ?> />
+						<?php esc_html_e( 'Attach a screenshot of the spot to each new comment', 'mbm-live-feedback' ); ?>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'Adds about 170KB to pages that show the feedback bar.', 'mbm-live-feedback' ); ?>
+					</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
 	 * Show where each value is coming from.
 	 *
 	 * This is the whole point of supporting wp-config.php constants — an admin
@@ -1263,6 +1291,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			'enabled'             => ! empty( $raw['enabled'] ),
 			'auto_create_markups' => ! empty( $raw['auto_create_markups'] ),
 			'shared_thread'       => ! empty( $raw['shared_thread'] ),
+			'screenshots'         => ! empty( $raw['screenshots'] ),
 			'post_types'        => array_values( array_intersect( $post_types, $allowed_post_types ) ),
 			'roles'             => array_values( array_intersect( $roles, $allowed_roles ) ),
 			'visibility'        => $visibility,

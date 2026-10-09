@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.17.1
+ * Version: 0.18.0
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.17.1' );
+define( 'MBM_LF_VERSION', '0.18.0' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );
@@ -36,17 +36,29 @@ define( 'MBM_LF_API_VERSION', '2023-02-22' );
  * The browser library, pinned to an exact build.
  *
  * MarkUp's own documentation and dashboard both point at a v1.0.0 file that does
- * not exist — 1.0.0-rc.1 is the only published build. The CDN has no "latest"
- * alias, so upgrading is always a deliberate edit here.
+ * not exist: there is no stable release yet, only release candidates. Each
+ * version's folder on the CDN now has a manifest.json with the sha384 of every
+ * file in it, so upgrading means changing the version below and copying both
+ * hashes from https://sdk.markup.io/v<version>/manifest.json.
  *
- * The hash is the sha384 of this exact file, confirmed to match the published
- * npm package. If either the URL or the file contents change, recompute it:
+ * Both hashes were also recomputed from the files themselves and match the
+ * published npm package:
  *
  *   curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A
  */
-define( 'MBM_LF_SDK_VERSION', '1.0.0-rc.1' );
-define( 'MBM_LF_SDK_URL', 'https://sdk.markup.io/v1.0.0-rc.1/markup-sdk-ui.min.js' );
-define( 'MBM_LF_SDK_SRI', 'sha384-rzI3mFbyDtcAWCZsIybacOMTTsXR8kJw9sy0hHn4kvTV1DBu5HU8pHP/QrIeRV4E' );
+define( 'MBM_LF_SDK_VERSION', '1.0.0-rc.7' );
+define( 'MBM_LF_SDK_URL', 'https://sdk.markup.io/v1.0.0-rc.7/markup-sdk-ui.min.js' );
+define( 'MBM_LF_SDK_SRI', 'sha384-9Kzi5rW9/bdmp1wlLFbNzXJ2HefAmMJpqulyQhDPfrdjNpk0zpbtUqXgFRHql+3p' );
+
+/**
+ * The screenshot plugin, from the same release as the library above.
+ *
+ * Loaded only when screenshots are switched on: it carries its own capture
+ * library and is about 170KB. It has to load after the main library, which it
+ * attaches itself to.
+ */
+define( 'MBM_LF_SDK_SCREENSHOT_URL', 'https://sdk.markup.io/v1.0.0-rc.7/markup-sdk-plugin-screenshot.min.js' );
+define( 'MBM_LF_SDK_SCREENSHOT_SRI', 'sha384-wIrcfA+/jfn35g68fKlPu8MSZacdNdWgUN/Rjj7M7/xoSt+KchPmtiMGgal7sdB9' );
 
 /**
  * Where updates come from.

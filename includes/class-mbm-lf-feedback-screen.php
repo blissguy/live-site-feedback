@@ -353,6 +353,12 @@ class MBM_LF_Feedback_Screen {
 
 							echo esc_html( implode( ' · ', $meta ) );
 							?>
+							<?php if ( '' !== $thread['page_link'] ) : ?>
+								·
+								<a href="<?php echo esc_url( $thread['page_link'] ); ?>" target="_blank" rel="noopener noreferrer">
+									<?php esc_html_e( 'View on page', 'mbm-live-feedback' ); ?>
+								</a>
+							<?php endif; ?>
 							·
 							<a href="<?php echo esc_url( $thread['app_url'] ); ?>" target="_blank" rel="noopener noreferrer">
 								<?php esc_html_e( 'Open in MarkUp.io', 'mbm-live-feedback' ); ?>
