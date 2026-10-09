@@ -56,7 +56,7 @@ class MBM_LF_Post_Meta {
 		$post_id = isset( $_POST['post_id'] ) ? (int) $_POST['post_id'] : 0;
 
 		if ( ! $post_id || ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( [ 'message' => __( 'You cannot edit that page.', 'mbm-live-feedback' ) ], 403 );
+			wp_send_json_error( [ 'message' => __( 'You can\'t edit that page.', 'mbm-live-feedback' ) ], 403 );
 		}
 
 		check_ajax_referer( self::NONCE . '_' . $post_id );
@@ -175,7 +175,7 @@ class MBM_LF_Post_Meta {
 
 		<p>
 			<label for="mbm-lf-markup-id" style="display:block;font-weight:600;margin-bottom:.25rem;">
-				<?php esc_html_e( 'MarkUp.io ID for this page', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'List ID', 'mbm-live-feedback' ); ?>
 			</label>
 			<input
 				type="text"
@@ -183,12 +183,12 @@ class MBM_LF_Post_Meta {
 				name="mbm_lf_markup_id"
 				class="widefat code"
 				value="<?php echo esc_attr( $markup_id ); ?>"
-				placeholder="<?php esc_attr_e( 'Paste the ID from MarkUp.io', 'mbm-live-feedback' ); ?>"
+				placeholder="<?php esc_attr_e( 'Paste a list ID from MarkUp.io', 'mbm-live-feedback' ); ?>"
 			>
 		</p>
 
 		<p class="description">
-			<?php esc_html_e( 'Comments left on this page are collected under this ID. Each page needs its own.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Comments on this page go into this list. Each page needs its own.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<?php
@@ -206,17 +206,17 @@ class MBM_LF_Post_Meta {
 			</p>
 		<?php elseif ( '' === $markup_id && '' !== $fallback ) : ?>
 			<p class="description">
-				<?php esc_html_e( 'Left blank, so this page falls back to the site-wide ID from the settings screen.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Blank, so this page uses the shared list.', 'mbm-live-feedback' ); ?>
 			</p>
 		<?php elseif ( '' === $markup_id ) : ?>
 			<p class="description">
-				<?php esc_html_e( 'This page has not been set up yet. It will happen by itself next time you view the page, or you can do it now.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Not set up yet. It happens on the next visit, or set it up now.', 'mbm-live-feedback' ); ?>
 			</p>
 		<?php endif; ?>
 
 		<?php if ( ! mbm_lf_provisioner()->site_is_publicly_reachable() ) : ?>
 			<p class="description" style="color:#996800;">
-				<?php esc_html_e( 'This site is not reachable from the internet yet, so pages cannot be set up automatically. Paste in an ID created against a public address, or wait until the site is live.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'This site isn\'t reachable from the internet, so pages can\'t be set up automatically. Paste in a list ID made for a public address.', 'mbm-live-feedback' ); ?>
 			</p>
 		<?php endif; ?>
 
@@ -232,8 +232,8 @@ class MBM_LF_Post_Meta {
 				>
 					<?php
 					echo '' === $markup_id
-						? esc_html__( 'Create ID now', 'mbm-live-feedback' )
-						: esc_html__( 'Replace with a new ID', 'mbm-live-feedback' );
+						? esc_html__( 'Create list now', 'mbm-live-feedback' )
+						: esc_html__( 'Replace with a new list', 'mbm-live-feedback' );
 					?>
 				</button>
 				<span id="mbm-lf-create-result" style="display:block;margin-top:.5rem;"></span>
@@ -250,7 +250,7 @@ class MBM_LF_Post_Meta {
 
 				btn.addEventListener( 'click', function () {
 					if ( '1' === btn.dataset.force &&
-						! window.confirm( <?php echo wp_json_encode( __( 'Replace this page’s ID? Comments already left under the old ID will no longer show on the page.', 'mbm-live-feedback' ) ); ?> ) ) {
+						! window.confirm( <?php echo wp_json_encode( __( 'Replace this page\'s list? Comments in the old list will no longer show on the page.', 'mbm-live-feedback' ) ); ?> ) ) {
 						return;
 					}
 
@@ -281,7 +281,7 @@ class MBM_LF_Post_Meta {
 							}
 						} )
 						.catch( function () {
-							out.textContent = <?php echo wp_json_encode( __( 'Could not reach WordPress to do that.', 'mbm-live-feedback' ) ); ?>;
+							out.textContent = <?php echo wp_json_encode( __( 'Couldn\'t reach WordPress. Try again.', 'mbm-live-feedback' ) ); ?>;
 							out.style.color = '#b32d2e';
 						} )
 						.finally( function () { btn.disabled = false; } );
@@ -317,21 +317,18 @@ class MBM_LF_Post_Meta {
 		<hr />
 		<p>
 			<label for="mbm-lf-motion-assignee">
-				<strong><?php esc_html_e( 'Send feedback to', 'mbm-live-feedback' ); ?></strong>
+				<strong><?php esc_html_e( 'Motion assignee', 'mbm-live-feedback' ); ?></strong>
 			</label>
 		</p>
 		<input type="hidden" name="mbm_lf_motion_assignee_shown" value="1" />
 		<select id="mbm-lf-motion-assignee" name="mbm_lf_motion_assignee" style="width:100%;">
-			<option value=""><?php esc_html_e( '— Settings default —', 'mbm-live-feedback' ); ?></option>
+			<option value=""><?php esc_html_e( '— Default —', 'mbm-live-feedback' ); ?></option>
 			<?php foreach ( $people as $person ) : ?>
 				<option value="<?php echo esc_attr( $person['id'] ?? '' ); ?>" <?php selected( $current, $person['id'] ?? '' ); ?>>
 					<?php echo esc_html( $person['name'] ?? $person['email'] ?? $person['id'] ?? '' ); ?>
 				</option>
 			<?php endforeach; ?>
 		</select>
-		<p class="description">
-			<?php esc_html_e( 'Overrides the settings for this page.', 'mbm-live-feedback' ); ?>
-		</p>
 		<?php
 	}
 

@@ -114,8 +114,8 @@ class MBM_LF_User_Meta {
 						<?php
 						echo esc_html(
 							$is_self
-								? __( 'Untick this and the bar never loads for you, so you cannot leave or read comments on the site.', 'mbm-live-feedback' )
-								: __( 'Untick this and the bar never loads for them, so they cannot leave or read comments on the site.', 'mbm-live-feedback' )
+								? __( 'Uncheck and the bar never loads for you, so you can\'t leave or read comments on the site.', 'mbm-live-feedback' )
+								: __( 'Uncheck and the bar never loads for them, so they can\'t leave or read comments on the site.', 'mbm-live-feedback' )
 						);
 						?>
 					</p>
@@ -152,7 +152,7 @@ class MBM_LF_User_Meta {
 		);
 		?>
 		<p class="description" style="color:#996800;">
-			<?php esc_html_e( 'They will still not see it: the setting for who the bar is shown to does not cover this account.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'They still won\'t see it: this account isn\'t covered by “Shown to” on the People tab.', 'mbm-live-feedback' ); ?>
 			<a href="<?php echo esc_url( $settings ); ?>"><?php esc_html_e( 'Change who sees it', 'mbm-live-feedback' ); ?></a>
 		</p>
 		<?php

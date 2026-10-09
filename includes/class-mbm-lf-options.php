@@ -59,6 +59,10 @@ class MBM_LF_Options {
 			'motion_new_status' => '',
 			'motion_enabled'    => true,
 			'motion_labels'     => [],
+			'motion_last_check' => [],
+			'motion_paused_by_repair' => false,
+			'connected_origin'  => '',
+			'lists_by_origin'   => [],
 		];
 	}
 
@@ -150,10 +154,10 @@ class MBM_LF_Options {
 	public static function positions() {
 		return [
 			'bottom-right'  => __( 'Bottom right', 'mbm-live-feedback' ),
-			'bottom-center' => __( 'Bottom centre', 'mbm-live-feedback' ),
+			'bottom-center' => __( 'Bottom center', 'mbm-live-feedback' ),
 			'bottom-left'   => __( 'Bottom left', 'mbm-live-feedback' ),
 			'top-right'     => __( 'Top right', 'mbm-live-feedback' ),
-			'top-center'    => __( 'Top centre', 'mbm-live-feedback' ),
+			'top-center'    => __( 'Top center', 'mbm-live-feedback' ),
 			'top-left'      => __( 'Top left', 'mbm-live-feedback' ),
 		];
 	}

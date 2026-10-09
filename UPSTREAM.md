@@ -168,6 +168,55 @@ fields on an update.
 
 ---
 
+## 9. Webhook deliveries go missing without anyone noticing
+
+**What happens:** two separate ways, both found on one live site that heard nothing for eight weeks
+while MarkUp.io kept sending.
+
+- **Redirects are not followed.** The registration still pointed at the site's old temporary
+  address, which 301s to the new one. Deliveries stop at the redirect.
+- **The sender looks like a bot.** Deliveries come from AWS addresses (seen: `34.228.29.155`,
+  `98.92.152.238`) with an empty user agent. Cloudflare's free Bot Fight Mode turns them away
+  before WordPress sees them, and it can't be given an exception: Skip rules have no effect on it.
+  The `34.229.37.143` / `.152` pair in Ceros's Cloudflare article is the page proxy, not the
+  webhook sender.
+
+There is no delivery log, no retry report and no way to send a test delivery, so neither failure is
+visible from MarkUp.io's side either. Retries happen (three attempts over about three minutes
+were seen), then the delivery is gone.
+
+**What we do:** Motion no longer depends on deliveries. `MBM_LF_Motion_Watch` asks for every
+thread every five minutes and compares it with a small note of the last answer; a delivery just
+makes that happen at once. The Motion integration tab shows when the last check ran. Check and
+repair setup registers the current address, removes registrations for old addresses once
+`MBM_LF_Address::probe()` confirms they are gone or redirect here, and says that a firewall may be
+in the way.
+
+**When fixed:** if MarkUp.io adds a delivery log or a test delivery, show it on the Setup tab. Keep
+the five-minute check either way.
+
+**How to check:** after a comment, compare the server's access log with `last_delivery` in
+`mbm_lf_options`.
+
+---
+
+## 10. The thread list hides resolved threads
+
+**What happens:** `GET /threads` defaults to `resolved=false`, which the documentation doesn't say,
+so asking once only ever returns open threads. Asking for the others needs `resolved=1`:
+`resolved=true` is refused with "resolved must be a boolean value". `limit` above 200 is refused,
+and paging uses `offset` against the returned `total`.
+
+**What we do:** `MBM_LF_Threads::fetch_all_raw()` asks twice, once per state, and pages through
+each.
+
+**When fixed:** if a single request can return both, use it and drop the second.
+
+**How to check:** `GET /threads?markupId=…` with no `resolved`, and compare `total` with
+`allTotals`.
+
+---
+
 ## Undocumented but useful
 
 Not bugs — just things worth knowing that the documentation does not mention.
@@ -182,6 +231,8 @@ Not bugs — just things worth knowing that the documentation does not mention.
 - **Undocumented endpoints** the SDK uses: `/auth/sdk-exchange` and `/auth/sdk-exchange/result`
   (the sign-in polling pair), and `POST /markups/:id/read-only`.
 - **An extra event** exists in the SDK types but not the docs: `comment:reply:delete`.
+- **A link straight to one comment** is `https://app.markup.io/markup/{markupId}/#thread/{threadId}`,
+  the same form deliveries carry in `comment.appUrl`.
 - **Every comment records the viewport it was left at.** `browserContext` on a thread carries
   `viewportWidth`/`viewportHeight` from `window.innerWidth`/`innerHeight`, read at the moment of
   commenting — verified by a comment left at 425 × 956 against nine others at 1800 × 1043. It also

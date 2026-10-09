@@ -45,7 +45,7 @@ class MBM_LF_Markups {
 		if ( ! MBM_LF_Credentials::has( 'api_key' ) ) {
 			return new WP_Error(
 				'mbm_lf_no_api_key',
-				__( 'Add your MarkUp.io API key before creating IDs automatically.', 'mbm-live-feedback' )
+				__( 'Add your MarkUp.io API key before creating lists automatically.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -54,7 +54,7 @@ class MBM_LF_Markups {
 		if ( '' === $workspace_id ) {
 			return new WP_Error(
 				'mbm_lf_no_workspace',
-				__( 'Run the automatic setup first so we know which workspace to use.', 'mbm-live-feedback' )
+				__( 'Press Set up automatically on the Setup tab first.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -71,7 +71,7 @@ class MBM_LF_Markups {
 
 			return new WP_Error(
 				'mbm_lf_not_reachable',
-				__( 'MarkUp.io has to be able to load this page to set it up, and this site is not reachable from the internet yet. Once the site is live this will work by itself. In the meantime you can paste in an ID you created against a public address.', 'mbm-live-feedback' )
+				__( 'MarkUp.io has to load this page to set it up, and this site isn\'t reachable from the internet yet. Until it\'s live, paste in a list ID made for a public address.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -118,7 +118,7 @@ class MBM_LF_Markups {
 					'mbm_lf_url_unreachable',
 					sprintf(
 						/* translators: %s: the page address. */
-						__( 'MarkUp.io could not load %s, so it could not set this page up. Check the page is reachable from outside your network.', 'mbm-live-feedback' ),
+						__( 'MarkUp.io couldn\'t load %s, so this page couldn\'t be set up. Check that the page is reachable from outside your network.', 'mbm-live-feedback' ),
 						$permalink
 					)
 				);
@@ -130,7 +130,7 @@ class MBM_LF_Markups {
 		}
 
 		if ( empty( $markup['id'] ) ) {
-			$message = __( 'MarkUp.io created the entry but did not return an ID for it.', 'mbm-live-feedback' );
+			$message = __( 'MarkUp.io created the list but didn\'t return its ID.', 'mbm-live-feedback' );
 
 			$this->record_failure( $post_id, $message );
 
@@ -224,7 +224,7 @@ class MBM_LF_Markups {
 		if ( '' === $workspace_id ) {
 			return new WP_Error(
 				'mbm_lf_no_workspace',
-				__( 'Run the automatic setup first so we know which workspace to use.', 'mbm-live-feedback' )
+				__( 'Press Set up automatically on the Setup tab first.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -233,7 +233,7 @@ class MBM_LF_Markups {
 
 			return new WP_Error(
 				'mbm_lf_not_reachable',
-				__( 'MarkUp.io has to be able to load this site to set it up, and it is not reachable from the internet yet. Once the site is live this will work by itself.', 'mbm-live-feedback' )
+				__( 'MarkUp.io has to load this site to set it up, and it isn\'t reachable from the internet yet. This works by itself once the site is live.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -264,7 +264,7 @@ class MBM_LF_Markups {
 		}
 
 		if ( empty( $markup['id'] ) ) {
-			$message = __( 'MarkUp.io created the entry but did not return an ID for it.', 'mbm-live-feedback' );
+			$message = __( 'MarkUp.io created the list but didn\'t return its ID.', 'mbm-live-feedback' );
 
 			set_transient( 'mbm_lf_site_error', $message, DAY_IN_SECONDS );
 			set_transient( 'mbm_lf_backoff_site', 1, self::RETRY_DELAY );

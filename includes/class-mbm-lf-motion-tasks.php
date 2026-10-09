@@ -2,10 +2,10 @@
 /**
  * Turns feedback into Motion tasks.
  *
- * A comment arriving adds a job; this drains the queue and does the talking.
- * The webhook that triggered it is unsigned and therefore untrusted, so nothing
- * here believes the payload about anything that matters — the page is resolved
- * locally, and the workspace and project come from settings.
+ * MBM_LF_Motion_Watch notices what changed and adds jobs; this drains the
+ * queue and does the talking. Nothing here believes a webhook payload about
+ * anything that matters — the thread is read from MarkUp.io, the page is
+ * resolved locally, and the workspace and project come from settings.
  *
  * @package MBM_Live_Feedback
  */
@@ -30,7 +30,6 @@ class MBM_LF_Motion_Tasks {
 	 * Register hooks.
 	 */
 	public function hooks() {
-		add_action( 'mbm_lf_webhook_received', [ $this, 'on_feedback' ], 10, 2 );
 		add_action( MBM_LF_Motion_Queue::CRON_HOOK, [ $this, 'drain' ] );
 		add_action( 'admin_init', [ $this, 'maybe_drain_on_admin' ] );
 	}
@@ -58,101 +57,6 @@ class MBM_LF_Motion_Tasks {
 	 */
 	public function is_active() {
 		return $this->is_ready() && (bool) MBM_LF_Options::get( 'motion_enabled' );
-	}
-
-	/* ---------------------------------------------------------------------
-	 * Taking work in
-	 * ------------------------------------------------------------------ */
-
-	/**
-	 * MarkUp.io reported something. Queue whatever it means for Motion.
-	 *
-	 * @param string $type Event type.
-	 * @param array  $body The delivery.
-	 */
-	public function on_feedback( $type, $body ) {
-		if ( ! $this->is_active() ) {
-			return;
-		}
-
-		/*
-		 * The webhook refuses other sites' deliveries before firing this, so
-		 * reaching here with someone else's feedback should be impossible. It
-		 * is checked again anyway: this is a public action any code can fire,
-		 * and the cost of being wrong is another site's comments appearing in
-		 * this site's task board.
-		 */
-		if ( ! mbm_lf_threads()->owns_delivery( $body ) ) {
-			return;
-		}
-
-		$comment = isset( $body['data']['comment'] ) && is_array( $body['data']['comment'] )
-			? $body['data']['comment']
-			: [];
-
-		$thread_id = isset( $comment['id'] ) ? (string) $comment['id'] : '';
-
-		if ( '' === $thread_id ) {
-			return;
-		}
-
-		if ( 'comment_reply_created' === $type ) {
-			/*
-			 * The reply itself is not read from the delivery. Deliveries are
-			 * unsigned, they repeat, and they can arrive out of order, so the
-			 * text is fetched from MarkUp.io when the job runs. A MarkUp read
-			 * costs nothing worth counting — a thousand a minute against
-			 * Motion's hundred and twenty — and it is the authoritative copy.
-			 */
-			MBM_LF_Motion_Queue::add(
-				'add_comment',
-				$thread_id,
-				[
-					'markup_id' => (string) ( $body['data']['markup']['id'] ?? '' ),
-				]
-			);
-
-			return;
-		}
-
-		if ( 'comment_resolved' === $type || 'comment_unresolved' === $type ) {
-			MBM_LF_Motion_Queue::add(
-				'comment_resolved' === $type ? 'resolve_task' : 'reopen_task',
-				$thread_id,
-				[]
-			);
-
-			return;
-		}
-
-		if ( 'comment_updated' === $type ) {
-			// Priority has no event of its own, so an edit is the only signal we
-			// get that it may have changed.
-			MBM_LF_Motion_Queue::add( 'sync_priority', $thread_id, [] );
-
-			return;
-		}
-
-		if ( 'comment_created' !== $type ) {
-			return;
-		}
-
-		MBM_LF_Motion_Queue::add(
-			'create_task',
-			$thread_id,
-			[
-				// Only what we need, so a queued job stays readable and small.
-				'text'      => (string) ( $comment['firstMessage']['text'] ?? '' ),
-				'number'    => (int) ( $comment['threadNumber'] ?? 0 ),
-				'app_url'   => (string) ( $comment['appUrl'] ?? '' ),
-				'author'    => (string) ( $comment['author']['name'] ?? '' ),
-				'page_url'  => (string) ( $comment['location']['canonicalUrl'] ?? $comment['location']['originalUrl'] ?? '' ),
-				'markup_id' => (string) ( $body['data']['markup']['id'] ?? '' ),
-				'browser'   => isset( $comment['browserContext'] ) && is_array( $comment['browserContext'] )
-					? $comment['browserContext']
-					: [],
-			]
-		);
 	}
 
 	/* ---------------------------------------------------------------------
@@ -233,7 +137,7 @@ class MBM_LF_Motion_Tasks {
 		$payload = json_decode( (string) $job['payload'], true );
 
 		if ( ! is_array( $payload ) ) {
-			MBM_LF_Motion_Queue::fail( $job, __( 'The stored job could not be read.', 'mbm-live-feedback' ), true );
+			MBM_LF_Motion_Queue::fail( $job, __( 'The stored job couldn\'t be read.', 'mbm-live-feedback' ), true );
 
 			return;
 		}
@@ -342,7 +246,7 @@ class MBM_LF_Motion_Tasks {
 		}
 
 		if ( empty( $result['id'] ) ) {
-			MBM_LF_Motion_Queue::fail( $job, __( 'Motion accepted the task but did not say which one it made.', 'mbm-live-feedback' ), true );
+			MBM_LF_Motion_Queue::fail( $job, __( 'Motion accepted the task but didn\'t return its ID.', 'mbm-live-feedback' ), true );
 
 			return;
 		}
@@ -377,61 +281,63 @@ class MBM_LF_Motion_Tasks {
 			return;
 		}
 
-		$reply = $this->latest_reply( $thread_id );
+		$replies = $this->unsent_replies( $thread_id );
 
-		if ( is_wp_error( $reply ) ) {
-			MBM_LF_Motion_Queue::fail( $job, $reply->get_error_message() );
-
-			return;
-		}
-
-		if ( ! $reply ) {
-			// Nothing new to say. Not a failure — the reply may have been
-			// deleted between the delivery and now.
-			MBM_LF_Motion_Queue::complete( $job['id'] );
+		if ( is_wp_error( $replies ) ) {
+			MBM_LF_Motion_Queue::fail( $job, $replies->get_error_message() );
 
 			return;
 		}
 
-		// A repeated delivery must not repeat the comment.
-		if ( $this->message_seen( $thread_id, $reply['id'] ) ) {
-			MBM_LF_Motion_Queue::complete( $job['id'] );
+		/*
+		 * Every reply not yet posted, oldest first, in one job. Identical
+		 * pending jobs are merged by the queue, so three replies left between
+		 * two checks arrive here as a single job — posting only one would lose
+		 * the other two. Each is marked as it goes, so a job cut short by the
+		 * budget or an error picks up where it stopped and repeats nothing.
+		 */
+		foreach ( $replies as $reply ) {
+			if ( MBM_LF_Motion_Queue::budget_remaining() < 1 ) {
+				MBM_LF_Motion_Queue::defer( $job, MINUTE_IN_SECONDS );
 
-			return;
+				return;
+			}
+
+			MBM_LF_Motion_Queue::spend();
+
+			$result = mbm_lf_motion()->request(
+				'POST',
+				'/comments',
+				[
+					'taskId'  => $task_id,
+					'content' => $this->comment_markdown( $reply ),
+				]
+			);
+
+			if ( is_wp_error( $result ) ) {
+				$this->handle_error( $job, $result );
+
+				return;
+			}
+
+			$this->mark_message_seen( $thread_id, $reply['id'] );
 		}
 
-		MBM_LF_Motion_Queue::spend();
-
-		$result = mbm_lf_motion()->request(
-			'POST',
-			'/comments',
-			[
-				'taskId'  => $task_id,
-				'content' => $this->comment_markdown( $reply ),
-			]
-		);
-
-		if ( is_wp_error( $result ) ) {
-			$this->handle_error( $job, $result );
-
-			return;
-		}
-
-		$this->mark_message_seen( $thread_id, $reply['id'] );
-
+		// Including when there was nothing new: the reply may have been
+		// deleted since, which is not a failure.
 		MBM_LF_Motion_Queue::complete( $job['id'] );
 	}
 
 	/**
-	 * The newest reply on a thread, read from MarkUp.io.
+	 * Replies not yet posted to Motion, oldest first, read from MarkUp.io.
 	 *
 	 * The first message is the comment itself, which is already the task, so
 	 * only what came after it counts as a reply.
 	 *
 	 * @param string $thread_id MarkUp thread id.
-	 * @return array|false|WP_Error Reply with id, text and author.
+	 * @return array|WP_Error Replies, each with id, text and author.
 	 */
-	private function latest_reply( $thread_id ) {
+	private function unsent_replies( $thread_id ) {
 		$thread = mbm_lf_api()->request( 'GET', '/api/v2/threads/' . rawurlencode( $thread_id ) );
 
 		if ( is_wp_error( $thread ) ) {
@@ -439,17 +345,10 @@ class MBM_LF_Motion_Tasks {
 		}
 
 		$messages = isset( $thread['messages'] ) && is_array( $thread['messages'] ) ? $thread['messages'] : [];
+		$replies  = [];
 
-		if ( count( $messages ) < 2 ) {
-			return false;
-		}
-
-		// Work backwards, so a burst of replies still finds one we have not
-		// posted rather than stopping at the newest every time.
-		for ( $i = count( $messages ) - 1; $i >= 1; $i-- ) {
-			$message = $messages[ $i ];
-
-			if ( empty( $message['id'] ) || $this->message_seen( $thread_id, $message['id'] ) ) {
+		foreach ( array_slice( $messages, 1 ) as $message ) {
+			if ( ! is_array( $message ) || empty( $message['id'] ) || $this->message_seen( $thread_id, $message['id'] ) ) {
 				continue;
 			}
 
@@ -462,14 +361,14 @@ class MBM_LF_Motion_Tasks {
 				}
 			}
 
-			return [
+			$replies[] = [
 				'id'     => (string) $message['id'],
 				'text'   => $text,
 				'author' => (string) ( $message['user']['name'] ?? '' ),
 			];
 		}
 
-		return false;
+		return $replies;
 	}
 
 	/**
@@ -541,7 +440,7 @@ class MBM_LF_Motion_Tasks {
 		if ( '' === $status ) {
 			MBM_LF_Motion_Queue::fail(
 				$job,
-				__( 'Could not work out which status this workspace uses for finished work.', 'mbm-live-feedback' ),
+				__( 'Couldn\'t tell which status this workspace uses for finished work.', 'mbm-live-feedback' ),
 				true
 			);
 

@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.16.0
+Stable tag: 0.17.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -32,8 +32,8 @@ Comments are collected in your MarkUp.io account, so you can work through them, 
 
 1. Upload the `mbm-live-feedback` folder to `/wp-content/plugins/`.
 2. Activate the plugin in WordPress.
-3. Go to **Live Feedback** in the admin menu and paste your MarkUp.io API key.
-4. Click **Test connection** to confirm it worked.
+3. Go to **Live Feedback > Settings** and paste your MarkUp.io API key.
+4. Click **Set up automatically**.
 
 If you would rather keep your key out of the database, add it to `wp-config.php` instead:
 
@@ -49,11 +49,11 @@ In your MarkUp.io account. This plugin connects your site to it and decides who 
 
 = Does every page have its own comment list? =
 
-By default, no — everything goes into one list for the whole site, which is usually what you want when a client is reviewing. Pins still sit on the page they were left on. If you would rather each page had its own list, untick "Keep all feedback for this site in one list" on the settings screen.
+By default, no — everything goes into one list for the whole site, which is usually what you want when a client is reviewing. Pins still sit on the page they were left on. If you would rather each page had its own list, uncheck "Keep all feedback for this site in one list" on the Feedback bar tab of the settings.
 
 = Can I turn the feedback bar off for one person? =
 
-Yes. Open their profile under **Users** and untick **Show this person the feedback bar on the site**. Nothing loads for them after that — no bar, no pins, and they cannot leave comments. Only administrators see that tick box, so nobody can switch themselves back on.
+Yes. Open their profile under **Users** and uncheck **Show this person the feedback bar on the site**. Nothing loads for them after that — no bar, no pins, and they cannot leave comments. Only administrators see that checkbox, so nobody can switch themselves back on.
 
 Everyone else is unaffected, and anything that person already wrote stays where it is.
 
@@ -74,6 +74,18 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.17.0 =
+* Motion no longer depends on MarkUp.io's notifications reaching the site. The site now checks for new comments, replies, resolves and priority changes every five minutes, and a notification just makes that happen sooner. Firewalls such as Cloudflare's Bot Fight Mode had been turning those notifications away without anyone knowing.
+* The Motion integration tab says when the site last checked for new comments, and warns if checks have stopped.
+* Several replies left close together now all reach the Motion task, not just one.
+* Check and repair setup now handles a change of address. It registers the site for its new address and removes the old one's setup, but only after confirming the old address is gone, redirects here, or is this same site.
+* A staging copy of a live site gets its own feedback list and pauses Motion when repaired, and live is left untouched. Pushing staging back over live switches live back to its own list.
+* A notice on every admin screen says when the site's address has changed since setup.
+* Running setup or uninstalling on a copy of a site no longer stops the original site's notifications.
+* The Comments screen can show open comments only, or all of them including resolved. Each page lists its comments with a link straight to each one in MarkUp.io.
+* The menu is now Live Feedback > Comments and Settings, and the settings tabs are Setup, Feedback bar, People, Motion integration and Advanced. Site identifier has moved to Advanced.
+* Shorter, clearer wording throughout, in American English.
 
 = 0.16.0 =
 * You can now turn the feedback bar off for one person, on their profile under Users. Nothing loads for them at all.

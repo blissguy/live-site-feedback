@@ -38,10 +38,9 @@ class MBM_LF_Motion_Settings {
 		$client    = mbm_lf_motion();
 		$connected = $client->has_key();
 		?>
-		<h2 class="title"><?php esc_html_e( 'Send feedback to Motion', 'mbm-live-feedback' ); ?></h2>
-
-		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Turn new comments into Motion tasks. Leave the key empty and none of this runs.', 'mbm-live-feedback' ); ?>
+		<?php // No heading: the tab already says Motion. ?>
+		<p class="description" style="max-width:44rem;margin-top:1rem;">
+			<?php esc_html_e( 'Turns new comments into Motion tasks.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<table class="form-table" role="presentation">
@@ -49,8 +48,8 @@ class MBM_LF_Motion_Settings {
 			<?php
 			$this->secret_row(
 				'motion_api_key',
-				__( 'Motion key', 'mbm-live-feedback' ),
-				__( 'From your Motion account settings, under API. It is only ever used from your server.', 'mbm-live-feedback' )
+				__( 'Motion API key', 'mbm-live-feedback' ),
+				__( 'From your Motion account settings, under API.', 'mbm-live-feedback' )
 			);
 			?>
 
@@ -68,13 +67,9 @@ class MBM_LF_Motion_Settings {
 		<?php if ( $connected ) : ?>
 			<p>
 				<button type="button" class="button button-secondary" id="mbm-lf-motion-test">
-					<?php esc_html_e( 'Test Motion connection', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Test connection', 'mbm-live-feedback' ); ?>
 				</button>
 				<span id="mbm-lf-motion-test-result" style="margin-left:.5rem;"></span>
-			</p>
-
-			<p class="description" style="max-width:44rem;">
-				<?php esc_html_e( 'Just added a project or a person in Motion?', 'mbm-live-feedback' ); ?>
 			</p>
 
 			<p>
@@ -82,8 +77,11 @@ class MBM_LF_Motion_Settings {
 					href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_refresh' ), 'mbm_lf_motion_refresh' ) ); ?>"
 					class="button button-secondary"
 				>
-					<?php esc_html_e( 'Fetch workspaces and projects again', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Refresh from Motion', 'mbm-live-feedback' ); ?>
 				</a>
+				<span class="description" style="margin-left:.5rem;">
+					<?php esc_html_e( 'Use after adding a project or person in Motion.', 'mbm-live-feedback' ); ?>
+				</span>
 			</p>
 
 			<?php $this->render_queue(); ?>
@@ -136,7 +134,7 @@ class MBM_LF_Motion_Settings {
 						<?php
 						printf(
 							/* translators: %s: PHP constant name. */
-							esc_html__( 'Defined as %s, so it cannot be changed here.', 'mbm-live-feedback' ),
+							esc_html__( 'Defined as %s, so it can\'t be changed here.', 'mbm-live-feedback' ),
 							'<code>' . esc_html( MBM_LF_Credentials::constant_name( $key ) ) . '</code>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 						);
 						?>
@@ -207,8 +205,8 @@ class MBM_LF_Motion_Settings {
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Comment', 'mbm-live-feedback' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'What we tried', 'mbm-live-feedback' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Why it stopped', 'mbm-live-feedback' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Step', 'mbm-live-feedback' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Reason', 'mbm-live-feedback' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Actions', 'mbm-live-feedback' ); ?></th>
 				</tr>
 			</thead>
@@ -232,7 +230,7 @@ class MBM_LF_Motion_Settings {
 							<?php if ( '' !== $page ) : ?>
 								<a href="<?php echo esc_url( $page ); ?>"><?php echo esc_html( wp_parse_url( $page, PHP_URL_PATH ) ?: $page ); ?></a>
 							<?php else : ?>
-								<span class="description"><?php esc_html_e( 'On a page we no longer have details for', 'mbm-live-feedback' ); ?></span>
+								<span class="description"><?php esc_html_e( 'Page unknown', 'mbm-live-feedback' ); ?></span>
 							<?php endif; ?>
 						</td>
 						<td><?php echo esc_html( $labels[ $action ] ?? $action ); ?></td>
@@ -251,10 +249,10 @@ class MBM_LF_Motion_Settings {
 						</td>
 						<td>
 							<a href="<?php echo esc_url( $again ); ?>" class="button button-small">
-								<?php esc_html_e( 'Try again', 'mbm-live-feedback' ); ?>
+								<?php esc_html_e( 'Retry', 'mbm-live-feedback' ); ?>
 							</a>
 							<a href="<?php echo esc_url( $drop ); ?>" class="button button-small button-link-delete">
-								<?php esc_html_e( 'Drop it', 'mbm-live-feedback' ); ?>
+								<?php esc_html_e( 'Remove', 'mbm-live-feedback' ); ?>
 							</a>
 						</td>
 					</tr>
@@ -275,16 +273,16 @@ class MBM_LF_Motion_Settings {
 		$on = (bool) MBM_LF_Options::get( 'motion_enabled' );
 		?>
 		<tr>
-			<th scope="row"><?php esc_html_e( 'Send feedback to Motion', 'mbm-live-feedback' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Sending', 'mbm-live-feedback' ); ?></th>
 			<td>
 				<?php /* Marks the control as present. Without it an unchecked box and an unrendered one look identical on save. */ ?>
 				<input type="hidden" name="motion_enabled_shown" value="1" />
 				<label>
 					<input type="checkbox" name="motion_enabled" value="1" <?php checked( $on ); ?> />
-					<?php esc_html_e( 'Turn new feedback into Motion tasks', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Send new comments to Motion', 'mbm-live-feedback' ); ?>
 				</label>
 				<p class="description">
-					<?php esc_html_e( 'Pause without losing your key or settings. Comments left while paused are not sent later.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Uncheck to pause without losing your settings. Comments left while paused aren\'t sent later.', 'mbm-live-feedback' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -320,9 +318,6 @@ class MBM_LF_Motion_Settings {
 							</option>
 						<?php endforeach; ?>
 					</select>
-					<p class="description">
-						<?php esc_html_e( 'Where this site’s feedback lands.', 'mbm-live-feedback' ); ?>
-					</p>
 				<?php endif; ?>
 			</td>
 		</tr>
@@ -350,7 +345,7 @@ class MBM_LF_Motion_Settings {
 		?>
 		<tr>
 			<th scope="row">
-				<label for="mbm-lf-motion-status"><?php esc_html_e( 'New tasks start as', 'mbm-live-feedback' ); ?></label>
+				<label for="mbm-lf-motion-status"><?php esc_html_e( 'Starting status', 'mbm-live-feedback' ); ?></label>
 			</th>
 			<td>
 				<select id="mbm-lf-motion-status" name="motion_new_status">
@@ -358,9 +353,9 @@ class MBM_LF_Motion_Settings {
 						<?php
 						if ( '' !== $default ) {
 							/* translators: %s: name of the workspace's default status, e.g. Todo. */
-							printf( esc_html__( 'Whatever Motion normally uses (%s)', 'mbm-live-feedback' ), esc_html( $default ) );
+							printf( esc_html__( 'Motion\'s default (%s)', 'mbm-live-feedback' ), esc_html( $default ) );
 						} else {
-							esc_html_e( 'Whatever Motion normally uses', 'mbm-live-feedback' );
+							esc_html_e( 'Motion\'s default', 'mbm-live-feedback' );
 						}
 						?>
 					</option>
@@ -407,7 +402,7 @@ class MBM_LF_Motion_Settings {
 		$current = (array) MBM_LF_Options::get( 'motion_labels' );
 		?>
 		<tr>
-			<th scope="row"><?php esc_html_e( 'Label new tasks', 'mbm-live-feedback' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'Labels', 'mbm-live-feedback' ); ?></th>
 			<td>
 				<input type="hidden" name="motion_labels_shown" value="1" />
 				<?php foreach ( $available as $label ) : ?>
@@ -421,7 +416,7 @@ class MBM_LF_Motion_Settings {
 					</label>
 				<?php endforeach; ?>
 				<p class="description">
-					<?php esc_html_e( 'Added to every task created from this site.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'Added to every new task.', 'mbm-live-feedback' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -443,14 +438,14 @@ class MBM_LF_Motion_Settings {
 		?>
 		<tr>
 			<th scope="row">
-				<label for="mbm-lf-motion-assignee"><?php esc_html_e( 'Give work to', 'mbm-live-feedback' ); ?></label>
+				<label for="mbm-lf-motion-assignee"><?php esc_html_e( 'Default assignee', 'mbm-live-feedback' ); ?></label>
 			</th>
 			<td>
 				<?php if ( is_wp_error( $users ) ) : ?>
 					<p style="color:#b32d2e;margin-top:0;"><?php echo esc_html( $users->get_error_message() ); ?></p>
 				<?php else : ?>
 					<select id="mbm-lf-motion-assignee" name="motion_default_assignee">
-						<option value=""><?php esc_html_e( '— Nobody in particular —', 'mbm-live-feedback' ); ?></option>
+						<option value=""><?php esc_html_e( '— Nobody —', 'mbm-live-feedback' ); ?></option>
 						<?php foreach ( $users as $user ) : ?>
 							<option value="<?php echo esc_attr( $user['id'] ?? '' ); ?>" <?php selected( $current, $user['id'] ?? '' ); ?>>
 								<?php echo esc_html( trim( ( $user['name'] ?? '' ) . ' · ' . ( $user['email'] ?? '' ), ' ·' ) ); ?>
@@ -469,12 +464,12 @@ class MBM_LF_Motion_Settings {
 								value="1"
 								<?php checked( (bool) MBM_LF_Options::get( 'motion_always_fallback' ) ); ?>
 							>
-							<?php esc_html_e( 'Always give feedback to this person', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'Assign every task to the default assignee', 'mbm-live-feedback' ); ?>
 						</label>
 					</p>
 
 					<p class="description">
-						<?php esc_html_e( 'Ignore who wrote the page.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Leave off to assign each task to the page\'s author when they have a Motion account.', 'mbm-live-feedback' ); ?>
 					</p>
 
 					<?php if ( ! MBM_LF_Options::get( 'motion_always_fallback' ) ) : ?>
@@ -530,7 +525,7 @@ class MBM_LF_Motion_Settings {
 			<?php
 			printf(
 				/* translators: %s: comma separated list of names. */
-				esc_html__( 'No Motion account found for %s, so their pages will fall back to the person above.', 'mbm-live-feedback' ),
+				esc_html__( 'No Motion account found for %s, so their pages go to the default assignee.', 'mbm-live-feedback' ),
 				esc_html( implode( ', ', array_slice( $missing, 0, 6 ) ) . ( count( $missing ) > 6 ? '…' : '' ) )
 			);
 			?>
@@ -551,8 +546,8 @@ class MBM_LF_Motion_Settings {
 		}
 
 		return $has
-			? __( 'Saved — leave blank to keep it', 'mbm-live-feedback' )
-			: __( 'Paste your Motion key', 'mbm-live-feedback' );
+			? __( 'Saved. Leave blank to keep it.', 'mbm-live-feedback' )
+			: __( 'Paste your Motion API key', 'mbm-live-feedback' );
 	}
 
 	/* ---------------------------------------------------------------------
@@ -647,6 +642,64 @@ class MBM_LF_Motion_Settings {
 	}
 
 	/**
+	 * Say when the site last checked MarkUp.io for changes.
+	 *
+	 * The check is what creates tasks, so if it stops, tasks stop. Saying when
+	 * it last ran is the difference between noticing that in minutes and
+	 * noticing it weeks later, which is how the webhook-only version failed.
+	 */
+	private function render_last_check() {
+		$last = MBM_LF_Motion_Watch::last_check();
+
+		if ( ! $last ) {
+			?>
+			<p class="description" style="max-width:44rem;">
+				<?php esc_html_e( 'Checks for new comments every five minutes. The first check hasn\'t run yet.', 'mbm-live-feedback' ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		$ago = human_time_diff( (int) $last['at'] );
+
+		// Three missed intervals means scheduled work is not running, not that
+		// the site is merely quiet.
+		$late = time() - (int) $last['at'] > 3 * MBM_LF_Motion_Watch::INTERVAL;
+
+		if ( '' !== $last['error'] ) {
+			?>
+			<p class="description" style="max-width:44rem;color:#b32d2e;">
+				<?php
+				printf(
+					/* translators: 1: time difference such as "5 mins", 2: error message. */
+					esc_html__( 'Couldn\'t check for new comments %1$s ago: %2$s', 'mbm-live-feedback' ),
+					esc_html( $ago ),
+					esc_html( $last['error'] )
+				);
+				?>
+			</p>
+			<?php
+			return;
+		}
+		?>
+		<p class="description" style="max-width:44rem;<?php echo $late ? 'color:#996800;' : ''; ?>">
+			<?php
+			printf(
+				/* translators: %s: time difference such as "5 mins". */
+				esc_html__( 'Last checked for new comments %s ago.', 'mbm-live-feedback' ),
+				esc_html( $ago )
+			);
+
+			if ( $late ) {
+				echo ' ';
+				esc_html_e( 'It should check every five minutes, so scheduled tasks on this site may not be running.', 'mbm-live-feedback' );
+			}
+			?>
+		</p>
+		<?php
+	}
+
+	/**
 	 * Say what the queue is doing.
 	 *
 	 * Work that happens on a schedule is invisible unless something says so,
@@ -677,8 +730,7 @@ class MBM_LF_Motion_Settings {
 		$stats = MBM_LF_Motion_Queue::stats();
 		?>
 		<p class="description" style="max-width:44rem;">
-			<strong><?php esc_html_e( 'New comments become tasks in the project above.', 'mbm-live-feedback' ); ?></strong>
-			<?php esc_html_e( 'Replies, priority and resolving all follow.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Replies, priority changes and resolving also reach the task.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<p class="description" style="max-width:44rem;">
@@ -695,13 +747,15 @@ class MBM_LF_Motion_Settings {
 			?>
 		</p>
 
+		<?php $this->render_last_check(); ?>
+
 		<?php if ( $stats['parked'] > 0 ) : ?>
 			<div class="notice notice-warning inline" style="max-width:44rem;margin:.5rem 0;">
 				<p>
 					<?php
 					printf(
 						/* translators: %s: number of items. */
-						esc_html( _n( '%s comment could not be sent to Motion.', '%s comments could not be sent to Motion.', $stats['parked'], 'mbm-live-feedback' ) ),
+						esc_html( _n( '%s comment couldn\'t be sent to Motion.', '%s comments couldn\'t be sent to Motion.', $stats['parked'], 'mbm-live-feedback' ) ),
 						esc_html( number_format_i18n( $stats['parked'] ) )
 					);
 					?>
@@ -712,7 +766,7 @@ class MBM_LF_Motion_Settings {
 						href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_motion_retry' ), 'mbm_lf_motion_retry' ) ); ?>"
 						class="button button-secondary"
 					>
-						<?php esc_html_e( 'Try sending them all again', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Retry all', 'mbm-live-feedback' ); ?>
 					</a>
 				</p>
 			</div>
@@ -763,7 +817,7 @@ class MBM_LF_Motion_Settings {
 	 */
 	private function requested_job() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
+			wp_die( esc_html__( 'You don\'t have permission to do that.', 'mbm-live-feedback' ) );
 		}
 
 		$job = isset( $_GET['job'] ) ? absint( wp_unslash( $_GET['job'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -783,6 +837,7 @@ class MBM_LF_Motion_Settings {
 			add_query_arg(
 				[
 					'page'          => MBM_LF_Settings::PAGE,
+					'tab'           => 'motion',
 					'mbm_lf_notice' => $notice,
 				],
 				admin_url( 'admin.php' )
@@ -793,7 +848,7 @@ class MBM_LF_Motion_Settings {
 
 	public function handle_retry() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
+			wp_die( esc_html__( 'You don\'t have permission to do that.', 'mbm-live-feedback' ) );
 		}
 
 		check_admin_referer( 'mbm_lf_motion_retry' );
@@ -804,6 +859,7 @@ class MBM_LF_Motion_Settings {
 			add_query_arg(
 				[
 					'page'          => MBM_LF_Settings::PAGE,
+					'tab'           => 'motion',
 					'mbm_lf_notice' => 'motion-retrying',
 				],
 				admin_url( 'admin.php' )
@@ -820,7 +876,7 @@ class MBM_LF_Motion_Settings {
 	 */
 	public function handle_refresh() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to do that.', 'mbm-live-feedback' ) );
+			wp_die( esc_html__( 'You don\'t have permission to do that.', 'mbm-live-feedback' ) );
 		}
 
 		check_admin_referer( 'mbm_lf_motion_refresh' );
@@ -841,6 +897,7 @@ class MBM_LF_Motion_Settings {
 			add_query_arg(
 				[
 					'page'          => MBM_LF_Settings::PAGE,
+					'tab'           => 'motion',
 					'mbm_lf_notice' => 'motion-refreshed',
 				],
 				admin_url( 'admin.php' )
@@ -858,7 +915,7 @@ class MBM_LF_Motion_Settings {
 	 */
 	public function ajax_test() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => __( 'You do not have permission to do that.', 'mbm-live-feedback' ) ], 403 );
+			wp_send_json_error( [ 'message' => __( 'You don\'t have permission to do that.', 'mbm-live-feedback' ) ], 403 );
 		}
 
 		check_ajax_referer( 'mbm_lf_motion_test' );
@@ -914,7 +971,7 @@ class MBM_LF_Motion_Settings {
 						out.style.color = res.success ? '#1d7a3c' : '#b32d2e';
 					} )
 					.catch( function () {
-						out.textContent = <?php echo wp_json_encode( __( 'Could not reach WordPress to do that.', 'mbm-live-feedback' ) ); ?>;
+						out.textContent = <?php echo wp_json_encode( __( 'Couldn\'t reach WordPress. Try again.', 'mbm-live-feedback' ) ); ?>;
 						out.style.color = '#b32d2e';
 					} )
 					.finally( function () { btn.disabled = false; } );

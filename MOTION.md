@@ -50,6 +50,9 @@ Two of these are load-bearing:
 
 ## 2. What triggers it
 
+> **Superseded in 0.17.0.** Webhooks proved too easy to lose; see §14 and UPSTREAM.md §9. The
+> reasoning below is kept as the record of the first design.
+
 **The MarkUp webhook, and only the webhook.**
 
 This is worth stating because the obvious-looking shortcut does not work. The browser cannot
@@ -539,3 +542,42 @@ marks the whole minute as spent so nothing else goes out meanwhile. That is the 
 behaviour whatever the response body turns out to look like.
 
 Worth confirming during a genuinely quiet period, or by asking Motion directly.
+
+---
+
+## 14. Checking instead of waiting to be told
+
+Built 2026-10-08, after learnwithvelo.com went eight weeks without a single delivery while
+MarkUp.io kept sending: first to an old address that redirects, then into Cloudflare's Bot Fight
+Mode. Nothing failed anywhere, so nothing said so. See UPSTREAM.md §9.
+
+**The site now asks.** `MBM_LF_Motion_Watch` runs every five minutes, reads every thread (open and
+resolved), and compares each with a note of three things from last time: resolved, message count
+and priority. A new thread becomes `create_task`; more messages become `add_comment`; a change of
+state becomes `resolve_task` or `reopen_task`; a change of priority becomes `sync_priority`. The
+queue, the worker and the duplicate guards in §5 and §6 are unchanged.
+
+**A delivery is now only a nudge.** It schedules a check ten seconds out instead of queuing jobs
+itself, so there is one path into the queue and nothing to double up. The single event carries an
+argument, because WordPress refuses a single event within ten minutes of another with the same hook
+and arguments, and the recurring check always is.
+
+Rules that matter:
+
+- **The first check only takes note.** Everything already there predates it, and turning it all
+  into tasks at once would bury the board.
+- **While Motion is paused the note keeps up**, so resuming starts from now, as §M4 promised.
+- **Only threads with a task get follow-ups.** Replies to feedback older than the first check
+  would otherwise park forever waiting for a task nobody is going to make.
+- **A failed read changes nothing.** A partial answer would make unread threads look deleted, then
+  new on the next check.
+- **Replies are posted together.** The queue merges identical pending jobs, so three replies
+  between two checks arrive as one `add_comment`; it now posts every unposted reply, oldest first,
+  rather than one.
+
+Cost: two MarkUp.io requests per check, against a thousand a minute. Motion is only called when
+something changed.
+
+Verified offline against stubbed MarkUp.io and Motion: first check, new thread, two replies in one
+check, no change, resolve, reopen with priority, replies on a pre-existing thread, a thread left
+while paused, a thread with an instant reply, a MarkUp.io outage, and 211 threads across two pages.

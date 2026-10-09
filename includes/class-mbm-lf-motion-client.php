@@ -100,7 +100,7 @@ class MBM_LF_Motion_Client {
 				'mbm_lf_motion_unreachable',
 				sprintf(
 					/* translators: %s: underlying error message. */
-					__( 'Could not reach Motion: %s', 'mbm-live-feedback' ),
+					__( 'Couldn\'t reach Motion: %s', 'mbm-live-feedback' ),
 					$response->get_error_message()
 				)
 			);
@@ -481,13 +481,13 @@ class MBM_LF_Motion_Client {
 		}
 
 		if ( 401 === $status || 403 === $status ) {
-			$message = __( 'Motion rejected the key. Check it was copied in full and has not been revoked.', 'mbm-live-feedback' );
+			$message = __( 'Motion rejected the API key. Check that it\'s correct and hasn\'t been revoked.', 'mbm-live-feedback' );
 		} elseif ( 429 === $status ) {
-			$message = __( 'Motion is rate limiting us. Tasks will catch up on their own shortly.', 'mbm-live-feedback' );
+			$message = __( 'Motion is limiting requests. Tasks catch up on their own shortly.', 'mbm-live-feedback' );
 		} elseif ( 404 === $status ) {
-			$message = __( 'Motion could not find that. It may have been deleted.', 'mbm-live-feedback' );
+			$message = __( 'Motion couldn\'t find that. It may have been deleted.', 'mbm-live-feedback' );
 		} elseif ( $status >= 500 ) {
-			$message = __( 'Motion had a server error. This is on their end — it should sort itself out.', 'mbm-live-feedback' );
+			$message = __( 'Motion had a server error. Tasks catch up once it\'s fixed.', 'mbm-live-feedback' );
 		} else {
 			$message = '' !== $detail ? $detail : __( 'Motion returned an error.', 'mbm-live-feedback' );
 		}

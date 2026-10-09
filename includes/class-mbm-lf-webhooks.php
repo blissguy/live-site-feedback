@@ -201,62 +201,145 @@ class MBM_LF_Webhooks {
 	}
 
 	/**
-	 * Ask MarkUp.io to notify this site.
+	 * Make MarkUp.io notify this address, and only this one.
 	 *
-	 * Any registration we made before is removed first, so repeated setup runs
-	 * cannot leave a trail of dead endpoints behind.
+	 * Keeps a registration that already points at this exact receiver, so
+	 * running repair on a healthy site changes nothing. Otherwise registers
+	 * one. Then tidies registrations this site made for addresses it used to
+	 * have — but only once probe() has shown the old address is gone, redirects
+	 * here, or is this same site. One belonging to a working copy elsewhere is
+	 * left exactly as it is; removing it is what used to break the other site.
 	 *
-	 * @return array|WP_Error
+	 * This replaces "delete the registration on record, then register again".
+	 * After a database copy the one on record belongs to the other site.
+	 *
+	 * @param bool $new_token Start a fresh token, so this site stops sharing
+	 *                        one with a copy of itself.
+	 * @return array|WP_Error Plain-language lines saying what was done.
 	 */
-	public function register() {
+	public function sync( $new_token = false ) {
 		$workspace_id = MBM_LF_Credentials::get( 'workspace_id' );
 
 		if ( '' === $workspace_id ) {
 			return new WP_Error(
 				'mbm_lf_no_workspace',
-				__( 'Run the automatic setup first so we know which workspace to use.', 'mbm-live-feedback' )
+				__( 'Press Set up automatically on the Setup tab first.', 'mbm-live-feedback' )
 			);
 		}
 
 		if ( ! mbm_lf_provisioner()->site_is_publicly_reachable() ) {
 			return new WP_Error(
 				'mbm_lf_not_reachable',
-				__( 'MarkUp.io cannot reach this site to notify it yet. This will start working once the site is live.', 'mbm-live-feedback' )
+				__( 'MarkUp.io can\'t reach this site to notify it yet. This starts working once the site is live.', 'mbm-live-feedback' )
 			);
 		}
 
-		$this->unregister();
+		$response = mbm_lf_api()->list_webhooks( $workspace_id );
 
-		$result = mbm_lf_api()->register_webhook( $workspace_id, $this->receiver_url(), self::EVENTS );
-
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		if ( is_wp_error( $response ) ) {
+			return $response;
 		}
 
-		if ( ! empty( $result['id'] ) ) {
-			MBM_LF_Options::update( [ 'webhook_registration_id' => $result['id'] ] );
+		$registrations = isset( $response['data'] ) && is_array( $response['data'] ) ? $response['data'] : [];
+
+		// Read before any change: a copy is recognised by the token it shares.
+		$old_token = MBM_LF_Credentials::get( 'webhook_secret' );
+		$elsewhere = MBM_LF_Address::elsewhere( $registrations, $old_token );
+		$lines     = [];
+
+		if ( $new_token ) {
+			MBM_LF_Credentials::set( 'webhook_secret', wp_generate_password( 48, false, false ) );
 		}
 
-		return $result;
+		$receiver = $this->receiver_url();
+		$keep     = '';
+
+		foreach ( $registrations as $registration ) {
+			if ( isset( $registration['url'], $registration['id'] ) && $receiver === $registration['url'] && ! empty( $registration['enabled'] ) ) {
+				$keep = (string) $registration['id'];
+				break;
+			}
+		}
+
+		if ( '' === $keep ) {
+			$created = mbm_lf_api()->register_webhook( $workspace_id, $receiver, self::EVENTS );
+
+			if ( is_wp_error( $created ) ) {
+				return $created;
+			}
+
+			$keep    = isset( $created['id'] ) ? (string) $created['id'] : '';
+			// Asked, not confirmed: a firewall can still turn deliveries away.
+			$lines[] = sprintf(
+				/* translators: %s: web address. */
+				__( 'Asked MarkUp.io to notify %s.', 'mbm-live-feedback' ),
+				MBM_LF_Address::host_of( home_url() )
+			);
+		} else {
+			$lines[] = __( 'MarkUp.io was already set to notify this address. Left as it is.', 'mbm-live-feedback' );
+		}
+
+		MBM_LF_Options::update( [ 'webhook_registration_id' => $keep ] );
+
+		$here = MBM_LF_Address::host_of( home_url() );
+
+		foreach ( $registrations as $registration ) {
+			$id  = isset( $registration['id'] ) ? (string) $registration['id'] : '';
+			$url = isset( $registration['url'] ) ? (string) $registration['url'] : '';
+
+			// Earlier registrations for this same address, under an old token,
+			// can only ever be ours, and MarkUp.io would be notifying a dead URL.
+			if ( '' !== $id && $id !== $keep && '' !== MBM_LF_Address::webhook_token( $url ) && MBM_LF_Address::host_of( $url ) === $here ) {
+				$this->delete_registration( $id );
+			}
+		}
+
+
+		foreach ( $elsewhere as $registration ) {
+			$host    = MBM_LF_Address::host_of( $registration['origin'] );
+			$verdict = MBM_LF_Address::probe( $registration['origin'] );
+
+			if ( MBM_LF_Address::is_ours( $verdict ) ) {
+				$deleted = $this->delete_registration( (string) $registration['id'] );
+
+				$lines[] = true === $deleted
+					? sprintf(
+						/* translators: %s: web address. */
+						__( 'Stopped MarkUp.io notifying the old address %s.', 'mbm-live-feedback' ),
+						$host
+					)
+					: sprintf(
+						/* translators: 1: web address, 2: error message. */
+						__( 'Couldn\'t stop MarkUp.io notifying the old address %1$s: %2$s', 'mbm-live-feedback' ),
+						$host,
+						$deleted->get_error_message()
+					);
+
+				continue;
+			}
+
+			$lines[] = sprintf(
+				/* translators: %s: web address. */
+				MBM_LF_Address::OTHER_SITE === $verdict
+					? __( '%s is another working copy of this site, so MarkUp.io keeps notifying it too. Run Check and repair setup there as well.', 'mbm-live-feedback' )
+					: __( 'Couldn\'t tell whether %s is still this site, so MarkUp.io keeps notifying it.', 'mbm-live-feedback' ),
+				$host
+			);
+		}
+
+		return array_values( array_filter( $lines ) );
 	}
 
 	/**
-	 * Remove our registration from MarkUp.io, if we have one.
+	 * Remove one registration from MarkUp.io.
 	 *
-	 * @return bool Whether anything was removed.
+	 * @param string $id Registration id.
+	 * @return true|WP_Error
 	 */
-	public function unregister() {
-		$id = (string) MBM_LF_Options::get( 'webhook_registration_id' );
+	private function delete_registration( $id ) {
+		$result = mbm_lf_api()->request( 'DELETE', '/api/v2/webhook-registrations/' . rawurlencode( $id ) );
 
-		if ( '' === $id ) {
-			return false;
-		}
-
-		mbm_lf_api()->request( 'DELETE', '/api/v2/webhook-registrations/' . rawurlencode( $id ) );
-
-		MBM_LF_Options::update( [ 'webhook_registration_id' => '' ] );
-
-		return true;
+		return is_wp_error( $result ) ? $result : true;
 	}
 
 	/* ---------------------------------------------------------------------

@@ -128,7 +128,7 @@ class MBM_LF_Updater {
 		$info->requires_php  = '7.4';
 		$info->last_updated  = $release['published'];
 		$info->sections      = [
-			'description' => wpautop( esc_html__( 'Let clients leave comments directly on your website, pinned to exactly what they are looking at. Comments are collected in your MarkUp.io account.', 'mbm-live-feedback' ) ),
+			'description' => wpautop( esc_html__( 'Let clients leave comments directly on your website, pinned to exactly what they\'re looking at. Comments are collected in your MarkUp.io account.', 'mbm-live-feedback' ) ),
 			'changelog'   => $this->changelog_html(),
 		];
 
@@ -174,7 +174,7 @@ class MBM_LF_Updater {
 		if ( ! $wp_filesystem->move( untrailingslashit( $source ), $corrected ) ) {
 			return new WP_Error(
 				'mbm_lf_rename_failed',
-				__( 'Could not prepare the downloaded update for installation.', 'mbm-live-feedback' )
+				__( 'Couldn\'t prepare the downloaded update for installation.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -200,7 +200,7 @@ class MBM_LF_Updater {
 	 */
 	public function handle_manual_check() {
 		if ( ! current_user_can( 'update_plugins' ) ) {
-			wp_die( esc_html__( 'You do not have permission to check for updates.', 'mbm-live-feedback' ) );
+			wp_die( esc_html__( 'You don\'t have permission to check for updates.', 'mbm-live-feedback' ) );
 		}
 
 		check_admin_referer( 'mbm_lf_check_updates' );

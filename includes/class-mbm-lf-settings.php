@@ -28,7 +28,7 @@ class MBM_LF_Settings {
 	 * Register hooks.
 	 */
 	public function hooks() {
-		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+		add_action( 'admin_menu', [ $this, 'register_menu' ], 11 );
 		add_action( 'admin_post_mbm_lf_save_settings', [ $this, 'handle_save' ] );
 		add_action( 'wp_ajax_mbm_lf_test_connection', [ $this, 'ajax_test_connection' ] );
 		add_action( 'wp_ajax_mbm_lf_provision', [ $this, 'ajax_provision' ] );
@@ -36,17 +36,19 @@ class MBM_LF_Settings {
 	}
 
 	/**
-	 * Add the admin menu entry.
+	 * Add Settings under the Live Feedback menu.
+	 *
+	 * The top-level item belongs to the Comments screen, which is what people
+	 * open every day. Runs after it, so the parent exists.
 	 */
 	public function register_menu() {
-		add_menu_page(
-			__( 'Live Site Feedback', 'mbm-live-feedback' ),
-			__( 'Live Feedback', 'mbm-live-feedback' ),
+		add_submenu_page(
+			MBM_LF_Feedback_Screen::PAGE,
+			__( 'Live Feedback settings', 'mbm-live-feedback' ),
+			__( 'Settings', 'mbm-live-feedback' ),
 			'manage_options',
 			self::PAGE,
-			[ $this, 'render_page' ],
-			'dashicons-format-chat',
-			80
+			[ $this, 'render_page' ]
 		);
 	}
 
@@ -72,7 +74,7 @@ class MBM_LF_Settings {
 	 */
 	public function render_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to manage these settings.', 'mbm-live-feedback' ) );
+			wp_die( esc_html__( 'You don\'t have permission to manage these settings.', 'mbm-live-feedback' ) );
 		}
 
 		/*
@@ -91,7 +93,7 @@ class MBM_LF_Settings {
 		$active    = isset( $tabs[ $requested ] ) ? $requested : 'setup';
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Live Site Feedback', 'mbm-live-feedback' ); ?></h1>
+			<h1><?php esc_html_e( 'Live Feedback settings', 'mbm-live-feedback' ); ?></h1>
 
 			<?php $this->render_notice( $notice ); ?>
 
@@ -134,21 +136,15 @@ class MBM_LF_Settings {
 						$this->render_secret_row(
 							'api_key',
 							__( 'API key', 'mbm-live-feedback' ),
-							__( 'From your workspace settings in MarkUp.io. Used only on your server.', 'mbm-live-feedback' )
-						);
-
-						$this->render_text_row(
-							'public_key',
-							__( 'Site identifier', 'mbm-live-feedback' ),
-							__( 'Filled in by Set up. Safe to appear in your pages.', 'mbm-live-feedback' )
+							__( 'From your workspace settings in MarkUp.io.', 'mbm-live-feedback' )
 						);
 						?>
 						</tbody>
 					</table>
 				</div>
 
-				<div class="mbm-lf-panel" data-panel="feedback">
-					<h2 class="title"><?php esc_html_e( 'Where feedback appears', 'mbm-live-feedback' ); ?></h2>
+				<div class="mbm-lf-panel" data-panel="bar">
+					<h2 class="title"><?php esc_html_e( 'Where it appears', 'mbm-live-feedback' ); ?></h2>
 
 					<?php $this->render_placement_fields(); ?>
 
@@ -167,7 +163,7 @@ class MBM_LF_Settings {
 					<?php $this->render_identity_fields(); ?>
 				</div>
 
-				<div class="mbm-lf-panel" data-panel="integrations">
+				<div class="mbm-lf-panel" data-panel="motion">
 					<?php
 					/**
 					 * Lets an optional module add its own settings.
@@ -212,11 +208,11 @@ class MBM_LF_Settings {
 	 */
 	private static function tabs() {
 		return [
-			'setup'        => __( 'Setup', 'mbm-live-feedback' ),
-			'feedback'     => __( 'Feedback', 'mbm-live-feedback' ),
-			'people'       => __( 'People', 'mbm-live-feedback' ),
-			'integrations' => __( 'Integrations', 'mbm-live-feedback' ),
-			'advanced'     => __( 'Advanced', 'mbm-live-feedback' ),
+			'setup'    => __( 'Setup', 'mbm-live-feedback' ),
+			'bar'      => __( 'Feedback bar', 'mbm-live-feedback' ),
+			'people'   => __( 'People', 'mbm-live-feedback' ),
+			'motion'   => __( 'Motion integration', 'mbm-live-feedback' ),
+			'advanced' => __( 'Advanced', 'mbm-live-feedback' ),
 		];
 	}
 
@@ -265,15 +261,19 @@ class MBM_LF_Settings {
 	 */
 	private function render_expert_fields() {
 		?>
-		<h2 class="title"><?php esc_html_e( 'Advanced', 'mbm-live-feedback' ); ?></h2>
-
-		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'These are set up for you. Change them only if you know you need to.', 'mbm-live-feedback' ); ?>
+		<p class="description" style="max-width:44rem;margin-top:1rem;">
+			<?php esc_html_e( 'Change these only if you know you need to.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<table class="form-table" role="presentation">
 			<tbody>
 			<?php
+			$this->render_text_row(
+				'public_key',
+				__( 'Site identifier', 'mbm-live-feedback' ),
+				__( 'Filled in by setup.', 'mbm-live-feedback' )
+			);
+
 			$this->render_text_row(
 				'private_key_path',
 				__( 'Signing key file', 'mbm-live-feedback' ),
@@ -296,7 +296,7 @@ class MBM_LF_Settings {
 						value="<?php echo esc_attr( (string) MBM_LF_Options::get( 'default_markup_id' ) ); ?>"
 					>
 					<p class="description">
-						<?php esc_html_e( 'Clear it and a new one is made.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Clear it to make a new one.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -389,14 +389,20 @@ class MBM_LF_Settings {
 			<h2 style="margin-top:0;"><?php esc_html_e( 'Set up', 'mbm-live-feedback' ); ?></h2>
 
 			<?php if ( ! $has_key ) : ?>
-				<p><?php esc_html_e( 'Add your API key below, then press the button.', 'mbm-live-feedback' ); ?></p>
+				<p><?php esc_html_e( 'Add your API key below, then press Set up automatically.', 'mbm-live-feedback' ); ?></p>
 			<?php elseif ( $provisioned ) : ?>
-				<p><?php esc_html_e( 'This site is registered with MarkUp.io and ready to collect feedback.', 'mbm-live-feedback' ); ?></p>
+				<p><?php esc_html_e( 'Ready to collect feedback.', 'mbm-live-feedback' ); ?></p>
 			<?php else : ?>
-				<p><?php esc_html_e( 'Press the button to register this site with MarkUp.io.', 'mbm-live-feedback' ); ?></p>
+				<p><?php esc_html_e( 'Press Set up automatically to connect this site to MarkUp.io.', 'mbm-live-feedback' ); ?></p>
 			<?php endif; ?>
 
 			<?php $this->render_checklist(); ?>
+
+			<?php
+			if ( $provisioned ) {
+				$this->render_address_health();
+			}
+			?>
 
 			<p>
 				<button
@@ -418,28 +424,111 @@ class MBM_LF_Settings {
 
 			<?php if ( $public_local ) : ?>
 				<p class="description" style="color:#996800;">
-					<strong><?php esc_html_e( 'This site is not reachable from the internet yet.', 'mbm-live-feedback' ); ?></strong>
-					<?php esc_html_e( 'MarkUp.io loads each page itself, so pages cannot be set up until this site is live at a public address. Connecting your account works now.', 'mbm-live-feedback' ); ?>
+					<strong><?php esc_html_e( 'This site isn\'t reachable from the internet yet.', 'mbm-live-feedback' ); ?></strong>
+					<?php esc_html_e( 'Your account connects now, but pages can\'t be set up until the site is live.', 'mbm-live-feedback' ); ?>
 				</p>
 				<p class="description" style="color:#996800;">
-					<?php esc_html_e( 'To try it now, paste an existing MarkUp.io ID into the shared list field under Advanced.', 'mbm-live-feedback' ); ?>
+					<?php esc_html_e( 'To try it now, paste an existing list ID into Shared list ID on the Advanced tab.', 'mbm-live-feedback' ); ?>
 				</p>
 			<?php endif; ?>
 
-			<p class="description">
+			<?php if ( ! $provisioned ) : ?>
+				<?php // Once set up, the address check above says the same thing. ?>
+				<p class="description">
+					<?php
+					printf(
+						/* translators: %s: list of web addresses. */
+						esc_html__( 'The feedback bar will be allowed on: %s', 'mbm-live-feedback' ),
+						'<code>' . esc_html( implode( '</code>, <code>', $provisioner->origins() ) ) . '</code>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					);
+					?>
+				</p>
+			<?php else : ?>
+				<p class="description">
+					<?php esc_html_e( 'Press it again after the site moves to a new address or is copied to or from staging.', 'mbm-live-feedback' ); ?>
+				</p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Whether MarkUp.io is set up for the address this site has now.
+	 *
+	 * Answers the question that went unasked for eight weeks on one site:
+	 * is MarkUp.io still talking to the address this site actually has?
+	 * Cached for twelve hours, and cleared by every repair.
+	 */
+	private function render_address_health() {
+		$health = MBM_LF_Address::health();
+		$report = get_option( 'mbm_lf_repair_report' );
+		$items  = [];
+
+		if ( null !== $health['bar'] ) {
+			$items[] = [ __( 'Feedback bar allowed on this address', 'mbm-live-feedback' ), $health['bar'] ];
+		}
+
+		if ( null !== $health['notify'] ) {
+			$items[] = [ __( 'MarkUp.io set to notify this address', 'mbm-live-feedback' ), $health['notify'] ];
+		}
+		?>
+		<?php if ( $items ) : ?>
+			<ul style="margin:0 0 1rem;">
+				<?php foreach ( $items as $item ) : ?>
+					<li style="margin-bottom:.25rem;">
+						<?php if ( $item[1] ) : ?>
+							<span style="color:#1d7a3c;font-weight:600;">&#10003;</span>
+						<?php else : ?>
+							<span style="color:#b32d2e;font-weight:600;">&#10007;</span>
+						<?php endif; ?>
+						<?php echo esc_html( $item[0] ); ?>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+
+		<?php if ( $health['stale'] ) : ?>
+			<p class="description" style="color:#996800;">
 				<?php
 				printf(
 					/* translators: %s: list of web addresses. */
-					esc_html__( 'Feedback will be allowed to run on: %s', 'mbm-live-feedback' ),
-					'<code>' . esc_html( implode( '</code>, <code>', $provisioner->origins() ) ) . '</code>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					esc_html__( 'MarkUp.io is still set to notify an old address: %s. Check and repair setup removes it once that address is gone.', 'mbm-live-feedback' ),
+					'<code>' . implode( '</code>, <code>', array_map( 'esc_html', $health['stale'] ) ) . '</code>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each item is escaped.
 				);
 				?>
 			</p>
+		<?php endif; ?>
 
-			<p class="description">
-				<?php esc_html_e( 'This cannot be changed afterwards. If the site moves to a new address, run setup again.', 'mbm-live-feedback' ); ?>
+		<?php if ( '' !== $health['error'] ) : ?>
+			<p class="description" style="color:#b32d2e;">
+				<?php
+				printf(
+					/* translators: %s: error message. */
+					esc_html__( 'Couldn\'t check the connection: %s', 'mbm-live-feedback' ),
+					esc_html( $health['error'] )
+				);
+				?>
 			</p>
-		</div>
+		<?php endif; ?>
+
+		<?php if ( is_array( $report ) && ! empty( $report['lines'] ) ) : ?>
+			<details style="margin:0 0 1rem;" <?php echo time() - (int) $report['at'] < 10 * MINUTE_IN_SECONDS ? 'open' : ''; ?>>
+				<summary>
+					<?php
+					printf(
+						/* translators: %s: time difference such as "5 mins". */
+						esc_html__( 'Last checked and repaired %s ago', 'mbm-live-feedback' ),
+						esc_html( human_time_diff( (int) $report['at'] ) )
+					);
+					?>
+				</summary>
+				<ul style="list-style:disc;margin:.5rem 0 0 1.25rem;">
+					<?php foreach ( (array) $report['lines'] as $line ) : ?>
+						<li><?php echo esc_html( (string) $line ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			</details>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -447,8 +536,6 @@ class MBM_LF_Settings {
 	 * Setup checklist.
 	 */
 	private function render_checklist() {
-		$limits = MBM_LF_Options::get( 'rate_limits' );
-
 		$items = [
 			[
 				'label' => __( 'API key saved', 'mbm-live-feedback' ),
@@ -493,18 +580,6 @@ class MBM_LF_Settings {
 			<?php endforeach; ?>
 		</ul>
 
-		<?php if ( ! empty( $limits['requestsPerMinute'] ) ) : ?>
-			<p class="description">
-				<?php
-				printf(
-					/* translators: 1: requests per minute, 2: sign-ins per minute. */
-					esc_html__( 'Your MarkUp.io plan allows %1$s requests and %2$s sign-ins per minute.', 'mbm-live-feedback' ),
-					esc_html( number_format_i18n( $limits['requestsPerMinute'] ) ),
-					esc_html( number_format_i18n( isset( $limits['exchangePerMinute'] ) ? $limits['exchangePerMinute'] : 0 ) )
-				);
-				?>
-			</p>
-		<?php endif; ?>
 		<?php
 	}
 
@@ -548,9 +623,6 @@ class MBM_LF_Settings {
 							</label>
 						<?php endforeach; ?>
 					</fieldset>
-					<p class="description">
-						<?php esc_html_e( 'Only these can collect feedback.', 'mbm-live-feedback' ); ?>
-					</p>
 				</td>
 			</tr>
 
@@ -568,10 +640,7 @@ class MBM_LF_Settings {
 					</label>
 
 					<p class="description">
-						<?php esc_html_e( 'One list for the whole site, so you can work through a client’s feedback in one go.', 'mbm-live-feedback' ); ?>
-					</p>
-					<p class="description">
-						<?php esc_html_e( 'Untick for a separate list per page.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Uncheck for a separate list per page.', 'mbm-live-feedback' ); ?>
 					</p>
 
 					<?php $this->render_shared_list_state(); ?>
@@ -588,10 +657,10 @@ class MBM_LF_Settings {
 							value="1"
 							<?php checked( (bool) MBM_LF_Options::get( 'auto_create_markups' ) ); ?>
 						>
-						<?php esc_html_e( 'Create them in MarkUp.io automatically', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Create new comment lists in MarkUp.io automatically', 'mbm-live-feedback' ); ?>
 					</label>
 					<p class="description">
-						<?php esc_html_e( 'Off means pasting IDs in yourself.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'Leave off to paste list IDs in yourself.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -631,7 +700,7 @@ class MBM_LF_Settings {
 		if ( ! MBM_LF_Options::get( 'auto_create_markups' ) ) {
 			?>
 			<p class="description" style="color:#996800;">
-				<?php esc_html_e( 'No list yet. Turn on “New lists”, or paste an ID under Advanced.', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'No list yet. Turn on “New lists”, or paste a list ID on the Advanced tab.', 'mbm-live-feedback' ); ?>
 			</p>
 			<?php
 			return;
@@ -656,7 +725,7 @@ class MBM_LF_Settings {
 		<table class="form-table" role="presentation">
 			<tbody>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Show the bar to', 'mbm-live-feedback' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Shown to', 'mbm-live-feedback' ); ?></th>
 				<td>
 					<fieldset>
 						<legend class="screen-reader-text">
@@ -748,13 +817,10 @@ class MBM_LF_Settings {
 					<?php if ( $can_sign ) : ?>
 						<p style="margin-top:0;">
 							<span style="color:#1d7a3c;font-weight:600;">&#10003;</span>
-							<?php esc_html_e( 'People signed in to this site comment under their own name, with nothing extra to sign in to.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'People signed in here comment under their own name, with nothing else to sign in to.', 'mbm-live-feedback' ); ?>
 						</p>
 						<p class="description">
-							<?php esc_html_e( 'They can comment, reply and mark things done. Deleting happens in MarkUp.io.', 'mbm-live-feedback' ); ?>
-						</p>
-						<p class="description">
-							<?php esc_html_e( 'Their name and picture are shared with MarkUp.io. Nothing else about their account is.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'Their name and picture are shared with MarkUp.io.', 'mbm-live-feedback' ); ?>
 						</p>
 					<?php else : ?>
 						<p style="margin-top:0;color:#996800;">
@@ -769,9 +835,6 @@ class MBM_LF_Settings {
 				<td>
 					<p style="margin-top:0;">
 						<?php esc_html_e( 'Visitors without an account here sign in through MarkUp.io.', 'mbm-live-feedback' ); ?>
-					</p>
-					<p class="description">
-						<?php esc_html_e( 'Who sees the bar at all is set above.', 'mbm-live-feedback' ); ?>
 					</p>
 				</td>
 			</tr>
@@ -809,7 +872,7 @@ class MBM_LF_Settings {
 
 			<tr>
 				<th scope="row">
-					<label for="mbm-lf-theme"><?php esc_html_e( 'Colour', 'mbm-live-feedback' ); ?></label>
+					<label for="mbm-lf-theme"><?php esc_html_e( 'Color', 'mbm-live-feedback' ); ?></label>
 				</th>
 				<td>
 					<select id="mbm-lf-theme" name="theme">
@@ -886,11 +949,11 @@ class MBM_LF_Settings {
 		<h2><?php esc_html_e( 'Storing settings in wp-config.php instead', 'mbm-live-feedback' ); ?></h2>
 
 		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Keys are stored encrypted in your database. Adding them to wp-config.php instead is safer on a live site. Values there always win, and the matching field becomes read-only.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'Keys are stored encrypted in your database. Keeping them in wp-config.php instead is safer on a live site, and makes these fields read-only.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Encryption is tied to your site security keys. Regenerate those and you will need to paste the API key again.', 'mbm-live-feedback' ); ?>
+			<?php esc_html_e( 'If your site\'s security keys change, paste the API key again.', 'mbm-live-feedback' ); ?>
 		</p>
 
 		<pre style="background:#fff;border:1px solid #dcdcde;padding:1rem;max-width:44rem;overflow:auto;"><code>define( 'MBM_LF_API_KEY', '...' );
@@ -935,9 +998,6 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			<?php endif; ?>
 		</p>
 
-		<p class="description" style="max-width:44rem;">
-			<?php esc_html_e( 'Updates arrive on the Plugins screen like any other plugin.', 'mbm-live-feedback' ); ?>
-		</p>
 
 		<?php /* A link, not a form: this sits inside the settings form and HTML has no nested forms. */ ?>
 		<p>
@@ -945,7 +1005,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 				href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=mbm_lf_check_updates' ), 'mbm_lf_check_updates' ) ); ?>"
 				class="button button-secondary"
 			>
-				<?php esc_html_e( 'Check for updates now', 'mbm-live-feedback' ); ?>
+				<?php esc_html_e( 'Check for updates', 'mbm-live-feedback' ); ?>
 			</a>
 		</p>
 		<?php
@@ -1027,7 +1087,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 				if ( $is_path && ! $locked && '' !== $value && ! is_readable( $value ) ) :
 					?>
 					<p class="description" style="color:#b32d2e;">
-						<?php esc_html_e( 'That file cannot be read. Check the path and the file permissions.', 'mbm-live-feedback' ); ?>
+						<?php esc_html_e( 'That file can\'t be read. Check the path and the file permissions.', 'mbm-live-feedback' ); ?>
 					</p>
 				<?php endif; ?>
 			</td>
@@ -1053,7 +1113,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			<?php
 			printf(
 				/* translators: %s: PHP constant name. */
-				esc_html__( 'Defined as %s, so it cannot be changed here.', 'mbm-live-feedback' ),
+				esc_html__( 'Defined as %s, so it can\'t be changed here.', 'mbm-live-feedback' ),
 				'<code>' . esc_html( MBM_LF_Credentials::constant_name( $key ) ) . '</code>'
 			);
 			?>
@@ -1074,7 +1134,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 		}
 
 		return $has
-			? __( 'Saved — leave blank to keep it', 'mbm-live-feedback' )
+			? __( 'Saved. Leave blank to keep it.', 'mbm-live-feedback' )
 			: __( 'Paste your key', 'mbm-live-feedback' );
 	}
 
@@ -1087,7 +1147,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 	 */
 	public function handle_save() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to manage these settings.', 'mbm-live-feedback' ) );
+			wp_die( esc_html__( 'You don\'t have permission to manage these settings.', 'mbm-live-feedback' ) );
 		}
 
 		check_admin_referer( self::NONCE );
@@ -1218,7 +1278,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 	 */
 	public function ajax_test_connection() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => __( 'You do not have permission to do that.', 'mbm-live-feedback' ) ], 403 );
+			wp_send_json_error( [ 'message' => __( 'You don\'t have permission to do that.', 'mbm-live-feedback' ) ], 403 );
 		}
 
 		check_ajax_referer( 'mbm_lf_test_connection' );
@@ -1260,7 +1320,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 	 */
 	public function ajax_provision() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => __( 'You do not have permission to do that.', 'mbm-live-feedback' ) ], 403 );
+			wp_send_json_error( [ 'message' => __( 'You don\'t have permission to do that.', 'mbm-live-feedback' ) ], 403 );
 		}
 
 		check_ajax_referer( 'mbm_lf_provision' );
@@ -1292,7 +1352,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 
 		wp_send_json_success(
 			[
-				'message' => __( 'Setup complete. Reloading…', 'mbm-live-feedback' ),
+				'message' => __( 'Done. Reloading…', 'mbm-live-feedback' ),
 				'reload'  => true,
 			]
 		);
@@ -1322,7 +1382,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 		<script>
 		( function () {
 			var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
-			var unreachable = <?php echo wp_json_encode( __( 'Could not reach WordPress to do that.', 'mbm-live-feedback' ) ); ?>;
+			var unreachable = <?php echo wp_json_encode( __( 'Couldn\'t reach WordPress. Try again.', 'mbm-live-feedback' ) ); ?>;
 
 			<?php echo 'var buttons = ' . wp_json_encode( $buttons ) . ';'; ?>
 
@@ -1383,13 +1443,13 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 	private function render_notice( $notice ) {
 		$notices = [
 			'saved'            => [ 'success', __( 'Settings saved.', 'mbm-live-feedback' ) ],
-			'update-available' => [ 'warning', __( 'A newer version is available. You can install it from the Plugins screen.', 'mbm-live-feedback' ) ],
+			'update-available' => [ 'warning', __( 'A newer version is available. Update it on the Plugins screen.', 'mbm-live-feedback' ) ],
 			'update-none'      => [ 'success', __( 'You are running the latest version.', 'mbm-live-feedback' ) ],
-			'update-failed'    => [ 'error', __( 'Could not reach the update server. Check back shortly.', 'mbm-live-feedback' ) ],
-			'motion-refreshed' => [ 'success', __( 'Fetched your workspaces, projects and people from Motion again.', 'mbm-live-feedback' ) ],
-			'motion-retrying'  => [ 'success', __( 'Those comments are queued to go to Motion again.', 'mbm-live-feedback' ) ],
-			'motion-retried-one' => [ 'success', __( 'That comment is queued to go to Motion again.', 'mbm-live-feedback' ) ],
-			'motion-forgotten' => [ 'success', __( 'That one has been dropped. It will not be sent to Motion.', 'mbm-live-feedback' ) ],
+			'update-failed'    => [ 'error', __( 'Couldn\'t reach the update server. Try again shortly.', 'mbm-live-feedback' ) ],
+			'motion-refreshed' => [ 'success', __( 'Refreshed workspaces, projects and people from Motion.', 'mbm-live-feedback' ) ],
+			'motion-retrying'  => [ 'success', __( 'Those comments will be sent to Motion again.', 'mbm-live-feedback' ) ],
+			'motion-retried-one' => [ 'success', __( 'That comment will be sent to Motion again.', 'mbm-live-feedback' ) ],
+			'motion-forgotten' => [ 'success', __( 'Removed. It won\'t be sent to Motion.', 'mbm-live-feedback' ) ],
 		];
 
 		if ( ! isset( $notices[ $notice ] ) ) {

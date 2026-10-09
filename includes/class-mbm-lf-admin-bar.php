@@ -52,8 +52,8 @@ class MBM_LF_Admin_Bar {
 				'href'  => $screen,
 				'meta'  => [
 					'title' => $open > 0
-						? __( 'Feedback waiting on you', 'mbm-live-feedback' )
-						: __( 'Site feedback', 'mbm-live-feedback' ),
+						? __( 'Open comments', 'mbm-live-feedback' )
+						: __( 'Comments', 'mbm-live-feedback' ),
 				],
 			]
 		);
@@ -64,8 +64,8 @@ class MBM_LF_Admin_Bar {
 					'id'     => 'mbm-lf-none',
 					'parent' => 'mbm-lf',
 					'title'  => 0 === $open
-						? __( 'Nothing waiting', 'mbm-live-feedback' )
-						: __( 'Open the feedback list', 'mbm-live-feedback' ),
+						? __( 'No open comments', 'mbm-live-feedback' )
+						: __( 'View all', 'mbm-live-feedback' ),
 					'href'   => $screen,
 				]
 			);
@@ -98,7 +98,7 @@ class MBM_LF_Admin_Bar {
 			[
 				'id'     => 'mbm-lf-all',
 				'parent' => 'mbm-lf',
-				'title'  => __( 'See all feedback', 'mbm-live-feedback' ),
+				'title'  => __( 'View all', 'mbm-live-feedback' ),
 				'href'   => $screen,
 			]
 		);

@@ -76,7 +76,7 @@ class MBM_LF_Api_Client {
 				'mbm_lf_http_failed',
 				sprintf(
 					/* translators: %s: underlying error message. */
-					__( 'Could not reach MarkUp.io: %s', 'mbm-live-feedback' ),
+					__( 'Couldn\'t reach MarkUp.io: %s', 'mbm-live-feedback' ),
 					$response->get_error_message()
 				)
 			);
@@ -99,7 +99,7 @@ class MBM_LF_Api_Client {
 		if ( ! is_array( $json ) ) {
 			return new WP_Error(
 				'mbm_lf_bad_response',
-				__( 'MarkUp.io returned a response we could not read.', 'mbm-live-feedback' )
+				__( 'MarkUp.io sent a reply this site couldn\'t read.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -321,13 +321,13 @@ class MBM_LF_Api_Client {
 		$request_id = isset( $error['requestId'] ) ? (string) $error['requestId'] : '';
 
 		if ( 401 === $status || 403 === $status ) {
-			$friendly = __( 'MarkUp.io rejected the API key. Check that it was copied in full and has not been revoked.', 'mbm-live-feedback' );
+			$friendly = __( 'MarkUp.io rejected the API key. Check that it\'s correct and hasn\'t been revoked.', 'mbm-live-feedback' );
 		} elseif ( 404 === $status ) {
-			$friendly = __( 'MarkUp.io could not find what we asked for. It may have been deleted.', 'mbm-live-feedback' );
+			$friendly = __( 'MarkUp.io couldn\'t find that. It may have been deleted.', 'mbm-live-feedback' );
 		} elseif ( 429 === $status ) {
-			$friendly = __( 'MarkUp.io is rate limiting us. Please wait a moment and try again.', 'mbm-live-feedback' );
+			$friendly = __( 'MarkUp.io is limiting requests. Wait a moment and try again.', 'mbm-live-feedback' );
 		} elseif ( $status >= 500 ) {
-			$friendly = __( 'MarkUp.io had a server error. This is on their end — try again shortly.', 'mbm-live-feedback' );
+			$friendly = __( 'MarkUp.io had a server error. Try again shortly.', 'mbm-live-feedback' );
 		} else {
 			$friendly = '' !== $message
 				? $message

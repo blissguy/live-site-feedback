@@ -61,7 +61,7 @@ class MBM_LF_Rest {
 		if ( ! ( new MBM_LF_Frontend() )->user_can_see() ) {
 			return new WP_Error(
 				'mbm_lf_not_permitted',
-				__( 'Your account does not have access to leave feedback here.', 'mbm-live-feedback' ),
+				__( 'Your account doesn\'t have access to leave feedback here.', 'mbm-live-feedback' ),
 				[ 'status' => 403 ]
 			);
 		}

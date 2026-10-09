@@ -61,7 +61,7 @@ class MBM_LF_Tokens {
 		if ( ! $this->can_sign() ) {
 			return new WP_Error(
 				'mbm_lf_cannot_sign',
-				__( 'This site is not set up to sign people in yet.', 'mbm-live-feedback' )
+				__( 'This site isn\'t set up to sign people in yet.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -70,7 +70,7 @@ class MBM_LF_Tokens {
 		if ( false === $key ) {
 			return new WP_Error(
 				'mbm_lf_bad_signing_key',
-				__( 'The signing key could not be read. Try running setup again.', 'mbm-live-feedback' )
+				__( 'The signing key couldn\'t be read. Press Check and repair setup.', 'mbm-live-feedback' )
 			);
 		}
 
@@ -109,7 +109,7 @@ class MBM_LF_Tokens {
 		if ( ! openssl_sign( $input, $signature, $key, OPENSSL_ALGO_SHA256 ) ) {
 			return new WP_Error(
 				'mbm_lf_sign_failed',
-				__( 'This server could not confirm who you are. Your host may be missing the security functions WordPress needs.', 'mbm-live-feedback' )
+				__( 'This server couldn\'t confirm who you are. Your host may be missing the security functions WordPress needs.', 'mbm-live-feedback' )
 			);
 		}
 

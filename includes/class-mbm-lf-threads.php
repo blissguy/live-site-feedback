@@ -23,7 +23,7 @@ class MBM_LF_Threads {
 	/**
 	 * Cache key for the assembled list.
 	 */
-	const CACHE_KEY = 'mbm_lf_threads';
+	const CACHE_KEY = 'mbm_lf_threads_v2';
 
 	/**
 	 * How long to hold the list when no webhook tells us otherwise.
@@ -94,18 +94,16 @@ class MBM_LF_Threads {
 		}
 
 		foreach ( $markup_ids as $markup_id ) {
-			$response = mbm_lf_api()->list_threads( $markup_id, [ 'limit' => 100 ] );
+			// Open and resolved both. Asking once only ever returned the open
+			// ones, so resolved feedback never reached this screen at all.
+			$threads = $this->fetch_all_raw( $markup_id );
 
-			if ( is_wp_error( $response ) ) {
+			if ( is_wp_error( $threads ) ) {
 				// One bad markup should not blank the whole screen.
-				$result['error'] = $response->get_error_message();
+				$result['error'] = $threads->get_error_message();
 
 				continue;
 			}
-
-			$threads = isset( $response['threads'] ) && is_array( $response['threads'] )
-				? $response['threads']
-				: [];
 
 			foreach ( $threads as $thread ) {
 				$normalised = $this->normalise( $thread, $markup_id );
@@ -231,9 +229,11 @@ class MBM_LF_Threads {
 					'total'    => 0,
 					'open'     => 0,
 					'activity' => 0,
+					'threads'  => [],
 				];
 			}
 
+			$pages[ $key ]['threads'][] = $thread;
 			$pages[ $key ]['total']++;
 
 			if ( ! $thread['resolved'] ) {
@@ -459,6 +459,56 @@ class MBM_LF_Threads {
 	}
 
 	/**
+	 * Every thread on one markup, open and resolved, exactly as MarkUp.io sends it.
+	 *
+	 * The list endpoint quietly defaults to `resolved=false`, so asking once
+	 * only ever returns open threads — resolved ones need their own request.
+	 * It also wants `1`/`0` rather than `true`/`false` ("resolved must be a
+	 * boolean value"), and caps a page at 200. Verified against the live API.
+	 *
+	 * All or nothing: a partial list would make missing threads look deleted
+	 * and unseen ones look new, which is worse than no answer.
+	 *
+	 * @param string $markup_id Markup id.
+	 * @return array|WP_Error Raw threads.
+	 */
+	public function fetch_all_raw( $markup_id ) {
+		$threads = [];
+
+		foreach ( [ 0, 1 ] as $resolved ) {
+			$offset = 0;
+
+			do {
+				$response = mbm_lf_api()->list_threads(
+					$markup_id,
+					[
+						'limit'    => 200,
+						'offset'   => $offset,
+						'resolved' => $resolved,
+					]
+				);
+
+				if ( is_wp_error( $response ) ) {
+					return $response;
+				}
+
+				$page = isset( $response['threads'] ) && is_array( $response['threads'] ) ? $response['threads'] : [];
+
+				foreach ( $page as $thread ) {
+					if ( is_array( $thread ) && ! empty( $thread['id'] ) ) {
+						$threads[] = $thread;
+					}
+				}
+
+				$offset += count( $page );
+				$total   = isset( $response['total'] ) ? (int) $response['total'] : 0;
+			} while ( $page && $offset < $total );
+		}
+
+		return $threads;
+	}
+
+	/**
 	 * Reduce a thread to what the admin screen needs.
 	 *
 	 * @param array  $thread    Thread from the API.
@@ -519,7 +569,8 @@ class MBM_LF_Threads {
 			'activity'  => $activity,
 			'url'       => $url,
 			'post_id'   => $url ? url_to_postid( $url ) : 0,
-			'app_url'   => 'https://app.markup.io/markup/' . rawurlencode( (string) $markup_id ),
+			// Straight to the comment, in the same form MarkUp.io's own links use.
+			'app_url'   => 'https://app.markup.io/markup/' . rawurlencode( (string) $markup_id ) . '/#thread/' . rawurlencode( (string) $thread['id'] ),
 		];
 	}
 

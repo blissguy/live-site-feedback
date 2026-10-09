@@ -12,7 +12,7 @@ No more "the button on the third section down looks off" in an email thread.
 1. Download `mbm-live-feedback-x.y.z.zip` from the
    [latest release](https://github.com/blissguy/live-site-feedback/releases/latest).
 2. In WordPress go to **Plugins → Add New → Upload Plugin** and pick the zip.
-3. Activate it, then go to **Live Feedback** in the admin menu.
+3. Activate it, then go to **Live Feedback > Settings**.
 4. Paste your MarkUp.io API key, save, then press **Set up automatically**.
 
 That last step registers the site with MarkUp.io, generates its own signing key, and reads back
@@ -21,7 +21,7 @@ everything else it needs. Nothing has to be copied between browser tabs.
 ### Updating
 
 The plugin updates itself. New releases show up on the **Plugins** screen like any other update
-— no downloading and re-uploading. There's also a **Check for updates now** button on the
+— no downloading and re-uploading. There's also a **Check for updates** button on the
 settings screen if you don't want to wait for WordPress's own schedule.
 
 Updates are read from this repository's public releases, so no token or account is involved.
@@ -46,15 +46,18 @@ Updates are read from this repository's public releases, so no token or account 
 | `includes/class-mbm-lf-credentials.php` | Credential storage. A `wp-config.php` constant always beats the database; secrets are encrypted at rest. |
 | `includes/class-mbm-lf-options.php` | Plugin preferences, kept separate from credentials so the front end doesn't read the credential store on every request. |
 | `includes/class-mbm-lf-api-client.php` | MarkUp.io REST client. Pins the API version and keeps `requestId` on errors. |
-| `includes/class-mbm-lf-provisioner.php` | One-click setup: keypair, installation, token settings. |
+| `includes/class-mbm-lf-provisioner.php` | One-click setup and Check and repair setup: keypair, installation, token settings, and what to do when the site's address has changed. |
+| `includes/class-mbm-lf-address.php` | Remembers the address the site was set up for, asks an old address whether it is still this site, and the address notice and health check. |
 | `includes/class-mbm-lf-markups.php` | Creates a MarkUp.io entry per page, with locking and backoff. |
 | `includes/class-mbm-lf-post-meta.php` | The per-page panel in the editor. |
 | `includes/class-mbm-lf-frontend.php` | Decides whether to show the feedback bar, and loads it. |
 | `includes/class-mbm-lf-tokens.php` | Signs the short-lived tokens that let WordPress users comment as themselves. |
 | `includes/class-mbm-lf-rest.php` | The token endpoint the feedback bar calls. |
-| `includes/class-mbm-lf-webhooks.php` | Receives change notifications and registers for them. |
-| `includes/class-mbm-lf-threads.php` | Reads comments back from MarkUp.io, cached, grouped by page. |
-| `includes/class-mbm-lf-feedback-screen.php` | The Feedback screen and dashboard widget. |
+| `includes/class-mbm-lf-webhooks.php` | Receives change notifications, and keeps MarkUp.io notifying this address and no other of its own. |
+| `includes/class-mbm-lf-threads.php` | Reads comments back from MarkUp.io, open and resolved, cached, grouped by page. |
+| `includes/class-mbm-lf-motion-watch.php` | Checks MarkUp.io for changes every five minutes and queues them for Motion. |
+| `includes/class-mbm-lf-motion-tasks.php` | Turns queued changes into Motion tasks, comments and status changes. |
+| `includes/class-mbm-lf-feedback-screen.php` | The Comments screen, the Live Feedback menu and the dashboard widget. |
 | `includes/class-mbm-lf-admin-bar.php` | The Feedback item in the toolbar. |
 | `includes/class-mbm-lf-settings.php` | Admin screen. |
 | `includes/class-mbm-lf-updater.php` | Updates from GitHub releases. |
@@ -91,7 +94,7 @@ define( 'MBM_LF_AUD', 'https://api.markup.io/v2/auth/exchange' );
 
 There is also one action, `mbm_lf_webhook_received`. Its payload is unauthenticated — MarkUp.io
 does not sign deliveries — so treat it as a hint that something changed and read the real state
-back through the API before acting on it.
+back through the API before acting on it. Don't rely on it arriving at all: see UPSTREAM.md §9.
 
 ---
 
@@ -123,6 +126,6 @@ changes underneath us the browser refuses to run it rather than executing someth
 
 ---
 
-## Licence
+## License
 
 GPL-2.0-or-later. By [Mixbus Marketing](https://mixbusmarketing.com/).

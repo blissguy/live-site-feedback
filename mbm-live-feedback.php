@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.16.0
+ * Version: 0.17.0
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.16.0' );
+define( 'MBM_LF_VERSION', '0.17.0' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );
@@ -70,6 +70,7 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-tokens.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-rest.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-threads.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-webhooks.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-address.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-feedback-screen.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-admin-bar.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-frontend.php';
@@ -79,6 +80,7 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-client.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-queue.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-tasks.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-watch.php';
 
 add_action( 'plugins_loaded', 'mbm_lf_bootstrap' );
 
@@ -97,6 +99,10 @@ function mbm_lf_bootstrap() {
 	( new MBM_LF_Rest() )->hooks();
 	( new MBM_LF_Webhooks() )->hooks();
 
+	// The ping route has to answer on any request, and the address notice
+	// shows on every admin screen.
+	( new MBM_LF_Address() )->hooks();
+
 	// The toolbar shows on the front end as well, so this cannot live behind the
 	// is_admin() check below.
 	( new MBM_LF_Admin_Bar() )->hooks();
@@ -108,6 +114,7 @@ function mbm_lf_bootstrap() {
 	 */
 	if ( mbm_lf_motion()->has_key() ) {
 		( new MBM_LF_Motion_Tasks() )->hooks();
+		( new MBM_LF_Motion_Watch() )->hooks();
 
 		if ( is_admin() ) {
 			MBM_LF_Motion_Queue::maybe_upgrade();
