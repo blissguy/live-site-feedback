@@ -39,6 +39,8 @@ class MBM_LF_Options {
 		return [
 			'enabled'           => true,
 			'post_types'        => [ 'page', 'post' ],
+			'placement'         => 'all',
+			'archives'          => true,
 			'visibility'        => 'capability',
 			'capability'        => 'edit_posts',
 			'roles'             => [],
@@ -64,6 +66,9 @@ class MBM_LF_Options {
 			'motion_paused_by_repair' => false,
 			'connected_origin'  => '',
 			'lists_by_origin'   => [],
+			'review_link'       => false,
+			'review_key'        => '',
+			'review_expires'    => '',
 		];
 	}
 
@@ -178,11 +183,6 @@ class MBM_LF_Options {
 	}
 
 	/**
-	 * Who the feedback bar is shown to.
-	 *
-	 * @return array<string, string>
-	 */
-	/**
 	 * The permissions offered for the capability check.
 	 *
 	 * A ladder rather than a free-text box: the point is to pick how far down
@@ -220,12 +220,29 @@ class MBM_LF_Options {
 		return (array) apply_filters( 'mbm_lf_capability_choices', $choices );
 	}
 
+	/**
+	 * Who the feedback bar is shown to.
+	 *
+	 * @return array<string, string>
+	 */
 	public static function visibility_choices() {
 		return [
 			'capability' => __( 'People who can edit content (recommended)', 'mbm-live-feedback' ),
 			'roles'      => __( 'Only the roles I choose', 'mbm-live-feedback' ),
 			'logged_in'  => __( 'Anyone logged in to this site', 'mbm-live-feedback' ),
 			'everyone'   => __( 'Every visitor, including the public', 'mbm-live-feedback' ),
+		];
+	}
+
+	/**
+	 * Which pages of the chosen content types show the feedback bar.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function placement_choices() {
+		return [
+			'all'    => __( 'Every page of these types', 'mbm-live-feedback' ),
+			'chosen' => __( 'Only pages I pick', 'mbm-live-feedback' ),
 		];
 	}
 }

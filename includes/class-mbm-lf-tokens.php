@@ -58,22 +58,6 @@ class MBM_LF_Tokens {
 	 * @return string|WP_Error The token.
 	 */
 	public function mint( WP_User $user ) {
-		if ( ! $this->can_sign() ) {
-			return new WP_Error(
-				'mbm_lf_cannot_sign',
-				__( 'This site isn\'t set up to sign people in yet.', 'mbm-live-feedback' )
-			);
-		}
-
-		$key = openssl_pkey_get_private( MBM_LF_Credentials::private_key() );
-
-		if ( false === $key ) {
-			return new WP_Error(
-				'mbm_lf_bad_signing_key',
-				__( 'The signing key couldn\'t be read. Press Check and repair setup.', 'mbm-live-feedback' )
-			);
-		}
-
 		$now = time();
 
 		$claims = [
@@ -89,21 +73,7 @@ class MBM_LF_Tokens {
 			'markupRole' => $this->role_for( $user ),
 		];
 
-		/*
-		 * Lock the session to this site's list. Every client site shares one
-		 * MarkUp.io workspace, so an unbound session from this site could read
-		 * and comment on any other site's list too. Bound, MarkUp.io answers 403
-		 * for anything else (tested 2026-10-09: the exchange echoes the id back).
-		 *
-		 * Only for the shared list. With a list per page the library keeps one
-		 * session across pages within a tab, and a session bound to the first
-		 * page's list would be refused on the second.
-		 */
-		$shared = (string) MBM_LF_Options::get( 'default_markup_id' );
-
-		if ( MBM_LF_Options::get( 'shared_thread' ) && '' !== $shared ) {
-			$claims['markupId'] = $shared;
-		}
+		$claims = $this->bind_to_shared_list( $claims );
 
 		/**
 		 * Filters the claims placed in a feedback token.
@@ -112,6 +82,96 @@ class MBM_LF_Tokens {
 		 * @param WP_User $user   The user the token is for.
 		 */
 		$claims = (array) apply_filters( 'mbm_lf_token_claims', $claims, $user );
+
+		return $this->sign( $claims );
+	}
+
+	/**
+	 * Sign a token for a guest: somebody with no account here.
+	 *
+	 * Nothing is created in WordPress and nobody is signed in to it. The token
+	 * only tells MarkUp.io what name and email to put on the guest's comments.
+	 *
+	 * @param string $name  The name they gave.
+	 * @param string $email The email they gave.
+	 * @return string|WP_Error The token.
+	 */
+	public function mint_guest( $name, $email ) {
+		$now = time();
+
+		$claims = [
+			'iss'        => MBM_LF_Credentials::get( 'iss' ),
+			'aud'        => MBM_LF_Credentials::get( 'aud' ),
+			'sub'        => $this->guest_subject( $email ),
+			'iat'        => $now,
+			'exp'        => $now + self::LIFETIME,
+			'jti'        => wp_generate_uuid4(),
+			'name'       => $name,
+			'email'      => $email,
+			'avatarUrl'  => get_avatar_url( $email, [ 'size' => 96 ] ),
+			'markupRole' => $this->guest_role(),
+		];
+
+		$claims = $this->bind_to_shared_list( $claims );
+
+		/**
+		 * Filters the claims placed in a guest's feedback token.
+		 *
+		 * @param array  $claims The claims.
+		 * @param string $email  The email the guest gave.
+		 */
+		$claims = (array) apply_filters( 'mbm_lf_guest_token_claims', $claims, $email );
+
+		return $this->sign( $claims );
+	}
+
+	/**
+	 * Lock the session to this site's list.
+	 *
+	 * Every client site shares one MarkUp.io workspace, so an unbound session
+	 * from this site could read and comment on any other site's list too.
+	 * Bound, MarkUp.io answers 403 for anything else (tested 2026-10-09: the
+	 * exchange echoes the id back).
+	 *
+	 * Only for the shared list. With a list per page the library keeps one
+	 * session across pages within a tab, and a session bound to the first
+	 * page's list would be refused on the second.
+	 *
+	 * @param array $claims Token claims.
+	 * @return array
+	 */
+	private function bind_to_shared_list( array $claims ) {
+		$shared = (string) MBM_LF_Options::get( 'default_markup_id' );
+
+		if ( MBM_LF_Options::get( 'shared_thread' ) && '' !== $shared ) {
+			$claims['markupId'] = $shared;
+		}
+
+		return $claims;
+	}
+
+	/**
+	 * Sign a set of claims.
+	 *
+	 * @param array $claims Token claims.
+	 * @return string|WP_Error The token.
+	 */
+	private function sign( array $claims ) {
+		if ( ! $this->can_sign() ) {
+			return new WP_Error(
+				'mbm_lf_cannot_sign',
+				__( 'This site isn\'t set up to sign people in yet.', 'mbm-live-feedback' )
+			);
+		}
+
+		$key = openssl_pkey_get_private( MBM_LF_Credentials::private_key() );
+
+		if ( false === $key ) {
+			return new WP_Error(
+				'mbm_lf_bad_signing_key',
+				__( 'The signing key couldn\'t be read. Press Check and repair setup.', 'mbm-live-feedback' )
+			);
+		}
 
 		$header = [
 			'alg' => 'RS256',
@@ -146,6 +206,41 @@ class MBM_LF_Tokens {
 		$salt = defined( 'AUTH_SALT' ) ? AUTH_SALT : ( defined( 'AUTH_KEY' ) ? AUTH_KEY : ABSPATH );
 
 		return 'wp_' . hash_hmac( 'sha256', 'user:' . (int) $user_id, $salt );
+	}
+
+	/**
+	 * A stable identifier for a guest, from the email they gave.
+	 *
+	 * Kept apart from members' identifiers by its prefix, so a guest can never
+	 * be mistaken for an account here, whatever email they type.
+	 *
+	 * @param string $email Email address.
+	 * @return string
+	 */
+	public function guest_subject( $email ) {
+		$salt = defined( 'AUTH_SALT' ) ? AUTH_SALT : ( defined( 'AUTH_KEY' ) ? AUTH_KEY : ABSPATH );
+
+		return 'guest_' . hash_hmac( 'sha256', 'guest:' . strtolower( trim( (string) $email ) ), $salt );
+	}
+
+	/**
+	 * Which MarkUp.io role to claim for a guest.
+	 *
+	 * Contributor unless a site asks for read-only guests. Never owner: a
+	 * guest is whoever typed an email, and owners can delete other people's
+	 * comments.
+	 *
+	 * @return string
+	 */
+	public function guest_role() {
+		/**
+		 * Filters the MarkUp.io role given to guests.
+		 *
+		 * @param string $role project:contributor or project:viewer.
+		 */
+		$role = (string) apply_filters( 'mbm_lf_guest_role', 'project:contributor' );
+
+		return in_array( $role, [ 'project:contributor', 'project:viewer' ], true ) ? $role : 'project:contributor';
 	}
 
 	/**

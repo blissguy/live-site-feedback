@@ -95,6 +95,7 @@ delete_option( MBM_LF_Motion_Tasks::LINKS );
 
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_MARKUP_ID );
 delete_post_meta_by_key( MBM_LF_Post_Meta::META_DISABLED );
+delete_post_meta_by_key( MBM_LF_Post_Meta::META_ENABLED );
 delete_post_meta_by_key( MBM_LF_Markups::META_ERROR );
 
 // There is no delete_user_meta_by_key(), so this is the equivalent: the final

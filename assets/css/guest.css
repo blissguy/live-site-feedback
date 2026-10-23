@@ -1,0 +1,175 @@
+/**
+ * The "Leave feedback" button and guest form, shown to visitors without an
+ * account until they give a name and email. Sits where the feedback bar will.
+ */
+
+.mbm-lf-guest-open,
+.mbm-lf-guest {
+	--mbm-lf-bg: #ffffff;
+	--mbm-lf-fg: #1d2327;
+	--mbm-lf-muted: #50575e;
+	--mbm-lf-line: #c3c4c7;
+	--mbm-lf-accent: #1d2327;
+	--mbm-lf-accent-fg: #ffffff;
+	--mbm-lf-error: #b32d2e;
+}
+
+.mbm-lf-theme-dark,
+.mbm-lf-theme-inverted {
+	--mbm-lf-bg: #1d2327;
+	--mbm-lf-fg: #f0f0f1;
+	--mbm-lf-muted: #c3c4c7;
+	--mbm-lf-line: #50575e;
+	--mbm-lf-accent: #f0f0f1;
+	--mbm-lf-accent-fg: #1d2327;
+	--mbm-lf-error: #f86368;
+}
+
+@media (prefers-color-scheme: dark) {
+	.mbm-lf-theme-auto {
+		--mbm-lf-bg: #1d2327;
+		--mbm-lf-fg: #f0f0f1;
+		--mbm-lf-muted: #c3c4c7;
+		--mbm-lf-line: #50575e;
+		--mbm-lf-accent: #f0f0f1;
+		--mbm-lf-accent-fg: #1d2327;
+		--mbm-lf-error: #f86368;
+	}
+}
+
+.mbm-lf-guest-open {
+	position: fixed;
+	z-index: 99999;
+	margin: 0;
+	padding: 0.625rem 1.125rem;
+	border: 1px solid var(--mbm-lf-line);
+	border-radius: 999px;
+	background: var(--mbm-lf-bg);
+	color: var(--mbm-lf-fg);
+	font: 600 14px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+	box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+	cursor: pointer;
+}
+
+.mbm-lf-guest-open:focus-visible {
+	outline: 2px solid var(--mbm-lf-fg);
+	outline-offset: 2px;
+}
+
+.mbm-lf-guest-open--bottom-right { right: 16px; bottom: 16px; }
+.mbm-lf-guest-open--bottom-left { left: 16px; bottom: 16px; }
+.mbm-lf-guest-open--bottom-center { left: 50%; bottom: 16px; transform: translateX(-50%); }
+.mbm-lf-guest-open--top-right { right: 16px; top: 16px; }
+.mbm-lf-guest-open--top-left { left: 16px; top: 16px; }
+.mbm-lf-guest-open--top-center { left: 50%; top: 16px; transform: translateX(-50%); }
+
+.mbm-lf-guest {
+	width: min(24rem, calc(100vw - 32px));
+	padding: 1.5rem;
+	border: 1px solid var(--mbm-lf-line);
+	border-radius: 12px;
+	background: var(--mbm-lf-bg);
+	color: var(--mbm-lf-fg);
+	font: 400 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+	box-shadow: 0 12px 40px rgb(0 0 0 / 0.3);
+}
+
+.mbm-lf-guest::backdrop {
+	background: rgb(0 0 0 / 0.45);
+}
+
+.mbm-lf-guest__form {
+	display: grid;
+	gap: 0.875rem;
+	margin: 0;
+}
+
+.mbm-lf-guest__title {
+	margin: 0;
+	color: inherit;
+	font-family: inherit;
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.mbm-lf-guest__intro {
+	margin: 0;
+	color: var(--mbm-lf-muted);
+	font-size: 14px;
+}
+
+.mbm-lf-guest__field {
+	display: grid;
+	gap: 0.25rem;
+	margin: 0;
+	color: inherit;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.mbm-lf-guest__field input {
+	box-sizing: border-box;
+	width: 100%;
+	margin: 0;
+	padding: 0.5rem 0.625rem;
+	border: 1px solid var(--mbm-lf-line);
+	border-radius: 6px;
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+	font-size: 15px;
+	font-weight: 400;
+	line-height: 1.4;
+}
+
+.mbm-lf-guest__field input:focus-visible {
+	outline: 2px solid var(--mbm-lf-fg);
+	outline-offset: 1px;
+}
+
+.mbm-lf-guest__error {
+	margin: 0;
+	color: var(--mbm-lf-error);
+	font-size: 14px;
+}
+
+.mbm-lf-guest__error:empty {
+	display: none;
+}
+
+.mbm-lf-guest__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+.mbm-lf-guest__actions button {
+	margin: 0;
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--mbm-lf-line);
+	border-radius: 6px;
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+}
+
+.mbm-lf-guest__actions .mbm-lf-guest__submit {
+	border-color: var(--mbm-lf-accent);
+	background: var(--mbm-lf-accent);
+	color: var(--mbm-lf-accent-fg);
+}
+
+.mbm-lf-guest__actions button:disabled {
+	opacity: 0.6;
+	cursor: progress;
+}
+
+.mbm-lf-guest__actions button:focus-visible {
+	outline: 2px solid var(--mbm-lf-fg);
+	outline-offset: 2px;
+}

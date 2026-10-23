@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Live Site Feedback
  * Description: Let clients leave comments directly on your website, pinned to exactly what they're looking at. Works with MarkUp.io.
- * Version: 0.18.0
+ * Version: 0.19.0
  * Author: Mixbus Marketing
  * Author URI: https://mixbusmarketing.com/
  * Text Domain: mbm-live-feedback
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MBM_LF_VERSION', '0.18.0' );
+define( 'MBM_LF_VERSION', '0.19.0' );
 define( 'MBM_LF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MBM_LF_URL', plugin_dir_url( __FILE__ ) );
 define( 'MBM_LF_BASENAME', plugin_basename( __FILE__ ) );
@@ -85,6 +85,7 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-webhooks.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-address.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-feedback-screen.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-admin-bar.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-review-link.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-frontend.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-updater.php';
@@ -150,6 +151,7 @@ function mbm_lf_bootstrap() {
 		return;
 	}
 
+	( new MBM_LF_Review_Link() )->hooks();
 	( new MBM_LF_Frontend() )->hooks();
 }
 

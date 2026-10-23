@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.18.0
+Stable tag: 0.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,13 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
 == Changelog ==
+
+= 0.19.0 =
+* New: review link. Anyone who opens it can leave feedback, logged in or not. It can be replaced at any time and given a last day.
+* New: visitors without an account here leave feedback as a guest with a name and email. No WordPress account is created.
+* New: show the feedback bar only on pages you pick.
+* New: setting to keep the feedback bar off category, tag, archive and search result pages.
+* Fixed: the blog page and the shop page now follow their own page's feedback switch.
 
 = 0.18.0 =
 * The feedback bar uses MarkUp.io's newer library (1.0.0-rc.7). Pins show a dot on comments you haven't opened yet, each comment shows an icon for the device it was left on, and every comment has a Copy link option.

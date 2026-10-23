@@ -30,6 +30,11 @@ class MBM_LF_Frontend {
 	const HANDLE_BOOT = 'mbm-lf-feedback';
 
 	/**
+	 * Style handle for the guest sign-in form.
+	 */
+	const HANDLE_GUEST_CSS = 'mbm-lf-guest';
+
+	/**
 	 * Register hooks.
 	 */
 	public function hooks() {
@@ -82,9 +87,19 @@ class MBM_LF_Frontend {
 		 * falling back to its own sign-in, so offering one we cannot honour
 		 * would leave the visitor stuck instead of merely signing in manually.
 		 */
-		if ( is_user_logged_in() && ( new MBM_LF_Tokens() )->can_sign() ) {
+		$can_sign = ( new MBM_LF_Tokens() )->can_sign();
+
+		if ( is_user_logged_in() && $can_sign ) {
 			$config['tokenEndpoint'] = rest_url( MBM_LF_Rest::NAMESPACE . '/token' );
 			$config['nonce']         = wp_create_nonce( 'wp_rest' );
+		} elseif ( $can_sign ) {
+			// Somebody without an account here: they give a name and email
+			// once, and WordPress vouches for them as a guest. Nothing is
+			// created here and nobody is logged in.
+			$config['guestEndpoint'] = rest_url( MBM_LF_Rest::NAMESPACE . '/guest-token' );
+			$config['guestText']     = $this->guest_text();
+
+			wp_enqueue_style( self::HANDLE_GUEST_CSS, MBM_LF_URL . 'assets/css/guest.css', [], MBM_LF_VERSION );
 		}
 
 		wp_add_inline_script(
@@ -236,14 +251,54 @@ class MBM_LF_Frontend {
 	 * @return bool
 	 */
 	private function location_enabled() {
-		if ( ! is_singular() ) {
-			// Archives, the blog index, search results and the shop have no post
-			// of their own to attach comments to, so they only make sense when
+		$post_id = self::current_page_id();
+
+		if ( ! $post_id ) {
+			// Categories, tags, archives and search results have no post of
+			// their own to attach comments to, so they only make sense when
 			// everything shares one list.
-			return $this->shared_mode();
+			return $this->shared_mode() && (bool) MBM_LF_Options::get( 'archives' );
 		}
 
-		return in_array( get_post_type(), MBM_LF_Options::post_types(), true );
+		if ( ! in_array( get_post_type( $post_id ), MBM_LF_Options::post_types(), true ) ) {
+			return false;
+		}
+
+		if ( MBM_LF_Post_Meta::is_disabled( $post_id ) ) {
+			return false;
+		}
+
+		if ( 'chosen' === MBM_LF_Options::get( 'placement' ) ) {
+			return MBM_LF_Post_Meta::is_enabled( $post_id );
+		}
+
+		return true;
+	}
+
+	/**
+	 * The page being viewed, when it is one somebody could pick.
+	 *
+	 * The blog page and the WooCommerce shop page are pages in the editor, with
+	 * their own settings box, but WordPress shows them as lists of posts and
+	 * products. They count as themselves here, so turning one on or off in its
+	 * editor does what it says.
+	 *
+	 * @return int Post id, or 0 for an archive or search page.
+	 */
+	public static function current_page_id() {
+		if ( is_singular() ) {
+			return (int) get_queried_object_id();
+		}
+
+		if ( is_home() && ! is_front_page() ) {
+			return (int) get_option( 'page_for_posts' );
+		}
+
+		if ( function_exists( 'is_shop' ) && is_shop() && function_exists( 'wc_get_page_id' ) ) {
+			return max( 0, (int) wc_get_page_id( 'shop' ) );
+		}
+
+		return 0;
 	}
 
 	/**
@@ -255,6 +310,11 @@ class MBM_LF_Frontend {
 		$mode = (string) MBM_LF_Options::get( 'visibility' );
 		$user = wp_get_current_user();
 		$can  = self::settings_allow( $user, $mode );
+
+		// A review link pass lets anybody in, logged in or not.
+		if ( ! $can && MBM_LF_Review_Link::has_pass() ) {
+			$can = true;
+		}
 
 		// An individual switched off on their profile is out, whatever the
 		// settings say. This is the narrower rule, so it goes last.
@@ -386,6 +446,25 @@ class MBM_LF_Frontend {
 		 * @param array $options Render options.
 		 */
 		return (array) apply_filters( 'mbm_lf_render_options', $options );
+	}
+
+	/**
+	 * Wording for the guest sign-in form.
+	 *
+	 * @return array<string, string>
+	 */
+	private function guest_text() {
+		return [
+			'open'    => __( 'Leave feedback', 'mbm-live-feedback' ),
+			'title'   => __( 'Leave feedback', 'mbm-live-feedback' ),
+			'intro'   => __( 'Your name and email go with each comment you leave.', 'mbm-live-feedback' ),
+			'name'    => __( 'Name', 'mbm-live-feedback' ),
+			'email'   => __( 'Email', 'mbm-live-feedback' ),
+			'submit'  => __( 'Start', 'mbm-live-feedback' ),
+			'cancel'  => __( 'Cancel', 'mbm-live-feedback' ),
+			'working' => __( 'Starting…', 'mbm-live-feedback' ),
+			'failed'  => __( 'Couldn\'t start feedback. Try again.', 'mbm-live-feedback' ),
+		];
 	}
 
 	/**

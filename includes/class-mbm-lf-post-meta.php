@@ -28,6 +28,11 @@ class MBM_LF_Post_Meta {
 	const META_DISABLED = '_mbm_lf_disabled';
 
 	/**
+	 * Meta key marking a post as picked, when only picked pages show the bar.
+	 */
+	const META_ENABLED = '_mbm_lf_enabled';
+
+	/**
 	 * Who this page's feedback goes to in Motion, overriding the usual rule.
 	 *
 	 * @var string
@@ -100,18 +105,20 @@ class MBM_LF_Post_Meta {
 				]
 			);
 
-			register_post_meta(
-				$post_type,
-				self::META_DISABLED,
-				[
-					'type'          => 'boolean',
-					'single'        => true,
-					'show_in_rest'  => false,
-					'auth_callback' => function ( $allowed, $meta_key, $post_id ) {
-						return current_user_can( 'edit_post', $post_id );
-					},
-				]
-			);
+			foreach ( [ self::META_DISABLED, self::META_ENABLED ] as $flag ) {
+				register_post_meta(
+					$post_type,
+					$flag,
+					[
+						'type'          => 'boolean',
+						'single'        => true,
+						'show_in_rest'  => false,
+						'auth_callback' => function ( $allowed, $meta_key, $post_id ) {
+							return current_user_can( 'edit_post', $post_id );
+						},
+					]
+				);
+			}
 		}
 	}
 
@@ -149,12 +156,30 @@ class MBM_LF_Post_Meta {
 		$shared    = (bool) MBM_LF_Options::get( 'shared_thread' );
 		?>
 
-		<p>
-			<label>
-				<input type="checkbox" name="mbm_lf_disabled" value="1" <?php checked( $disabled ); ?>>
-				<?php esc_html_e( 'Turn off feedback for this page', 'mbm-live-feedback' ); ?>
-			</label>
-		</p>
+		<?php
+		/*
+		 * One switch, whichever way round the site works: an on switch when
+		 * only picked pages show the bar, an off switch otherwise. The hidden
+		 * field says which one was on screen, so saving never touches the other.
+		 */
+		if ( 'chosen' === MBM_LF_Options::get( 'placement' ) ) :
+			?>
+			<input type="hidden" name="mbm_lf_placement_shown" value="chosen">
+			<p>
+				<label>
+					<input type="checkbox" name="mbm_lf_enabled" value="1" <?php checked( self::is_enabled( $post->ID ) && ! $disabled ); ?>>
+					<?php esc_html_e( 'Show feedback on this page', 'mbm-live-feedback' ); ?>
+				</label>
+			</p>
+		<?php else : ?>
+			<input type="hidden" name="mbm_lf_placement_shown" value="all">
+			<p>
+				<label>
+					<input type="checkbox" name="mbm_lf_disabled" value="1" <?php checked( $disabled ); ?>>
+					<?php esc_html_e( 'Turn off feedback for this page', 'mbm-live-feedback' ); ?>
+				</label>
+			</p>
+		<?php endif; ?>
 
 		<?php
 		/*
@@ -372,7 +397,19 @@ class MBM_LF_Post_Meta {
 			update_post_meta( $post_id, self::META_MARKUP_ID, $markup_id );
 		}
 
-		if ( empty( $_POST['mbm_lf_disabled'] ) ) {
+		$shown = isset( $_POST['mbm_lf_placement_shown'] ) ? sanitize_key( wp_unslash( $_POST['mbm_lf_placement_shown'] ) ) : 'all';
+
+		if ( 'chosen' === $shown ) {
+			if ( empty( $_POST['mbm_lf_enabled'] ) ) {
+				delete_post_meta( $post_id, self::META_ENABLED );
+			} else {
+				update_post_meta( $post_id, self::META_ENABLED, 1 );
+
+				// The off switch isn't on screen in this mode, so an old one
+				// must not quietly overrule the box that was just ticked.
+				delete_post_meta( $post_id, self::META_DISABLED );
+			}
+		} elseif ( empty( $_POST['mbm_lf_disabled'] ) ) {
 			delete_post_meta( $post_id, self::META_DISABLED );
 		} else {
 			update_post_meta( $post_id, self::META_DISABLED, 1 );
@@ -458,6 +495,49 @@ class MBM_LF_Post_Meta {
 	 */
 	public static function is_disabled( $post_id ) {
 		return (bool) get_post_meta( $post_id, self::META_DISABLED, true );
+	}
+
+	/**
+	 * Whether a post was picked to show feedback.
+	 *
+	 * Only matters when the site shows the bar on picked pages alone.
+	 *
+	 * @param int $post_id Post id.
+	 * @return bool
+	 */
+	public static function is_enabled( $post_id ) {
+		return (bool) get_post_meta( $post_id, self::META_ENABLED, true );
+	}
+
+	/**
+	 * Posts picked to show feedback.
+	 *
+	 * @param int $limit Most to return.
+	 * @return WP_Post[]
+	 */
+	public static function picked_posts( $limit = 50 ) {
+		$types = MBM_LF_Options::post_types();
+
+		if ( empty( $types ) ) {
+			return [];
+		}
+
+		return get_posts(
+			[
+				'post_type'        => $types,
+				'post_status'      => 'any',
+				'posts_per_page'   => (int) $limit,
+				'orderby'          => 'title',
+				'order'            => 'ASC',
+				'suppress_filters' => false,
+				'meta_query'       => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					[
+						'key'   => self::META_ENABLED,
+						'value' => '1',
+					],
+				],
+			]
+		);
 	}
 
 	/**

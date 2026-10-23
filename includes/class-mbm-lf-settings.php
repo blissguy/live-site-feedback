@@ -162,6 +162,10 @@ class MBM_LF_Settings {
 
 					<?php $this->render_visibility_fields(); ?>
 
+					<h2 class="title"><?php esc_html_e( 'Review link', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_review_link_fields(); ?>
+
 					<h2 class="title"><?php esc_html_e( 'How people are identified', 'mbm-live-feedback' ); ?></h2>
 
 					<?php $this->render_identity_fields(); ?>
@@ -595,6 +599,7 @@ class MBM_LF_Settings {
 		$selected   = MBM_LF_Options::post_types();
 		$fallback   = (string) MBM_LF_Options::get( 'default_markup_id' );
 		$post_types = MBM_LF_Options::selectable_post_types();
+		$placement  = (string) MBM_LF_Options::get( 'placement' );
 		?>
 		<table class="form-table" role="presentation">
 			<tbody>
@@ -627,6 +632,46 @@ class MBM_LF_Settings {
 							</label>
 						<?php endforeach; ?>
 					</fieldset>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Pages', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<fieldset>
+						<legend class="screen-reader-text">
+							<?php esc_html_e( 'Which pages show the feedback bar', 'mbm-live-feedback' ); ?>
+						</legend>
+						<?php foreach ( MBM_LF_Options::placement_choices() as $value => $label ) : ?>
+							<label style="display:block;margin-bottom:.25rem;">
+								<input
+									type="radio"
+									name="placement"
+									value="<?php echo esc_attr( $value ); ?>"
+									<?php checked( $placement, $value ); ?>
+								>
+								<?php echo esc_html( $label ); ?>
+							</label>
+						<?php endforeach; ?>
+					</fieldset>
+					<p class="description">
+						<?php esc_html_e( 'Each page has a Live Site Feedback box in its editor to turn feedback on or off.', 'mbm-live-feedback' ); ?>
+					</p>
+
+					<?php $this->render_picked_pages( $placement ); ?>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Other pages', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="archives" value="1" <?php checked( (bool) MBM_LF_Options::get( 'archives' ) ); ?>>
+						<?php esc_html_e( 'Also show it on category, tag, archive and search result pages', 'mbm-live-feedback' ); ?>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'Only when all feedback goes into one list.', 'mbm-live-feedback' ); ?>
+					</p>
 				</td>
 			</tr>
 
@@ -671,6 +716,41 @@ class MBM_LF_Settings {
 
 			</tbody>
 		</table>
+		<?php
+	}
+
+	/**
+	 * List the pages picked to show feedback.
+	 *
+	 * @param string $placement Current placement setting.
+	 */
+	private function render_picked_pages( $placement ) {
+		if ( 'chosen' !== $placement ) {
+			return;
+		}
+
+		$picked = MBM_LF_Post_Meta::picked_posts();
+
+		if ( empty( $picked ) ) {
+			?>
+			<p class="description" style="color:#996800;">
+				<?php esc_html_e( 'No pages picked, so the feedback bar shows on none of them.', 'mbm-live-feedback' ); ?>
+			</p>
+			<?php
+			return;
+		}
+		?>
+		<p style="margin-bottom:.25rem;"><strong><?php esc_html_e( 'Picked pages', 'mbm-live-feedback' ); ?></strong></p>
+		<ul style="margin-top:0;">
+			<?php foreach ( $picked as $post ) : ?>
+				<li>
+					<a href="<?php echo esc_url( (string) get_edit_post_link( $post->ID ) ); ?>">
+						<?php echo esc_html( '' !== $post->post_title ? $post->post_title : __( '(no title)', 'mbm-live-feedback' ) ); ?>
+					</a>
+					<span class="description">&middot; <?php echo esc_html( get_post_type_object( $post->post_type )->labels->singular_name ); ?></span>
+				</li>
+			<?php endforeach; ?>
+		</ul>
 		<?php
 	}
 
@@ -750,7 +830,7 @@ class MBM_LF_Settings {
 
 					<?php if ( 'everyone' === $mode ) : ?>
 						<p class="description" style="color:#996800;">
-							<?php esc_html_e( 'Anyone visiting your site can comment. Use this only while collecting public feedback.', 'mbm-live-feedback' ); ?>
+							<?php esc_html_e( 'Anyone visiting your site can leave feedback. Use this only while collecting public feedback.', 'mbm-live-feedback' ); ?>
 						</p>
 					<?php endif; ?>
 				</td>
@@ -804,6 +884,121 @@ class MBM_LF_Settings {
 	}
 
 	/**
+	 * The review link: a secret address that opens the feedback bar.
+	 */
+	private function render_review_link_fields() {
+		$on       = (bool) MBM_LF_Options::get( 'review_link' );
+		$link     = MBM_LF_Review_Link::url();
+		$last_day = (string) MBM_LF_Options::get( 'review_expires' );
+		?>
+		<table class="form-table" role="presentation">
+			<tbody>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Review link', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="review_link" value="1" <?php checked( $on ); ?>>
+						<?php esc_html_e( 'Let anyone with the review link leave feedback', 'mbm-live-feedback' ); ?>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'On top of the people chosen above, logged in or not.', 'mbm-live-feedback' ); ?>
+					</p>
+
+					<?php if ( $on && '' !== $link ) : ?>
+						<p style="display:flex;gap:.5rem;align-items:center;max-width:40rem;">
+							<input
+								type="text"
+								id="mbm-lf-review-url"
+								class="large-text code"
+								value="<?php echo esc_attr( $link ); ?>"
+								readonly
+								aria-label="<?php esc_attr_e( 'Review link', 'mbm-live-feedback' ); ?>"
+							>
+							<button type="button" class="button" id="mbm-lf-review-copy">
+								<?php esc_html_e( 'Copy link', 'mbm-live-feedback' ); ?>
+							</button>
+						</p>
+						<p class="description">
+							<?php
+							printf(
+								/* translators: %s: the query string that opens the feedback bar, such as ?feedback= */
+								esc_html__( 'Works on any page. Add the same %s ending to its address.', 'mbm-live-feedback' ),
+								'<code>?' . esc_html( MBM_LF_Review_Link::PARAM ) . '=…</code>'
+							);
+							?>
+						</p>
+
+						<?php if ( MBM_LF_Review_Link::is_expired() ) : ?>
+							<p class="description" style="color:#b32d2e;">
+								<?php esc_html_e( 'This link has stopped working. Change or clear the last day below.', 'mbm-live-feedback' ); ?>
+							</p>
+						<?php endif; ?>
+
+						<p>
+							<button
+								type="submit"
+								class="button"
+								name="mbm_lf_new_review_link"
+								value="1"
+								onclick="return window.confirm( <?php echo esc_attr( wp_json_encode( __( 'Make a new link? The current one stops working, including for anyone using it now.', 'mbm-live-feedback' ) ) ); ?> );"
+							>
+								<?php esc_html_e( 'Make a new link', 'mbm-live-feedback' ); ?>
+							</button>
+						</p>
+						<script>
+						( function () {
+							var btn   = document.getElementById( 'mbm-lf-review-copy' );
+							var field = document.getElementById( 'mbm-lf-review-url' );
+
+							if ( ! btn || ! field ) {
+								return;
+							}
+
+							btn.addEventListener( 'click', function () {
+								var done = function () {
+									btn.textContent = <?php echo wp_json_encode( __( 'Copied', 'mbm-live-feedback' ) ); ?>;
+								};
+
+								field.select();
+
+								if ( navigator.clipboard && navigator.clipboard.writeText ) {
+									navigator.clipboard.writeText( field.value ).then( done, function () {
+										document.execCommand( 'copy' );
+										done();
+									} );
+								} else {
+									document.execCommand( 'copy' );
+									done();
+								}
+							} );
+						}() );
+						</script>
+					<?php endif; ?>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="mbm-lf-review-expires"><?php esc_html_e( 'Last day', 'mbm-live-feedback' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="date"
+						id="mbm-lf-review-expires"
+						name="review_expires"
+						value="<?php echo esc_attr( $last_day ); ?>"
+					>
+					<p class="description">
+						<?php esc_html_e( 'The link stops working after this day. Leave blank to keep it working.', 'mbm-live-feedback' ); ?>
+					</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
 	 * Explain how people are identified, and what they can do.
 	 *
 	 * There is deliberately nothing to configure here. MarkUp.io decides what a
@@ -837,9 +1032,18 @@ class MBM_LF_Settings {
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Everyone else', 'mbm-live-feedback' ); ?></th>
 				<td>
-					<p style="margin-top:0;">
-						<?php esc_html_e( 'Visitors without an account here sign in through MarkUp.io.', 'mbm-live-feedback' ); ?>
-					</p>
+					<?php if ( $can_sign ) : ?>
+						<p style="margin-top:0;">
+							<?php esc_html_e( 'Visitors without an account here enter a name and email once, then comment as a guest. This doesn\'t create an account or log them in here.', 'mbm-live-feedback' ); ?>
+						</p>
+						<p class="description">
+							<?php esc_html_e( 'An email that belongs to an account here is refused. That person logs in instead.', 'mbm-live-feedback' ); ?>
+						</p>
+					<?php else : ?>
+						<p style="margin-top:0;">
+							<?php esc_html_e( 'Visitors without an account here sign in through MarkUp.io.', 'mbm-live-feedback' ); ?>
+						</p>
+					<?php endif; ?>
 				</td>
 			</tr>
 			</tbody>
@@ -1202,7 +1406,15 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			);
 		}
 
-		MBM_LF_Options::update( $this->sanitize_options( $_POST ) );
+		$options = $this->sanitize_options( $_POST );
+
+		// A key is made the first time the link is turned on, and again on
+		// request. It is never typed in, so it can't be guessed or reused.
+		if ( ( $options['review_link'] && '' === MBM_LF_Review_Link::key() ) || ! empty( $_POST['mbm_lf_new_review_link'] ) ) {
+			$options['review_key'] = MBM_LF_Review_Link::new_key();
+		}
+
+		MBM_LF_Options::update( $options );
 
 		/**
 		 * Lets an optional module save its own settings.
@@ -1283,6 +1495,18 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			$capability = 'edit_posts';
 		}
 
+		$placement = isset( $raw['placement'] ) ? sanitize_key( wp_unslash( $raw['placement'] ) ) : 'all';
+
+		if ( ! array_key_exists( $placement, MBM_LF_Options::placement_choices() ) ) {
+			$placement = 'all';
+		}
+
+		$last_day = isset( $raw['review_expires'] ) ? sanitize_text_field( wp_unslash( $raw['review_expires'] ) ) : '';
+
+		if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $last_day, $parts ) || ! checkdate( (int) $parts[2], (int) $parts[3], (int) $parts[1] ) ) {
+			$last_day = '';
+		}
+
 		$markup_id = isset( $raw['default_markup_id'] )
 			? MBM_LF_Post_Meta::sanitize_markup_id( wp_unslash( $raw['default_markup_id'] ) )
 			: '';
@@ -1292,6 +1516,10 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			'auto_create_markups' => ! empty( $raw['auto_create_markups'] ),
 			'shared_thread'       => ! empty( $raw['shared_thread'] ),
 			'screenshots'         => ! empty( $raw['screenshots'] ),
+			'archives'            => ! empty( $raw['archives'] ),
+			'review_link'         => ! empty( $raw['review_link'] ),
+			'review_expires'      => $last_day,
+			'placement'           => $placement,
 			'post_types'        => array_values( array_intersect( $post_types, $allowed_post_types ) ),
 			'roles'             => array_values( array_intersect( $roles, $allowed_roles ) ),
 			'visibility'        => $visibility,
