@@ -118,7 +118,8 @@ or in MarkUp.io. Both comment abilities also return a `markdown` field with all 
 read. Links in a comment keep their real target, which can differ from the text shown.
 
 They need the same permission as the Comments screen, `edit_posts`, and they only read. Nothing
-here lets an agent reply to a comment or resolve one.
+here lets an agent reply to a comment or resolve one. They're on by default and can be switched
+off with **Let AI agents read comments on this site** on the Advanced tab.
 
 ---
 
