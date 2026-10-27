@@ -790,7 +790,7 @@ class MBM_LF_Motion_Tasks {
 			$lines[] = '';
 		}
 
-		$seen = $this->viewport_line( $context );
+		$seen = self::viewport_line( $context );
 
 		if ( '' !== $seen ) {
 			$lines[] = $seen;
@@ -853,7 +853,7 @@ class MBM_LF_Motion_Tasks {
 	 * @param array $context Browser context from MarkUp.io.
 	 * @return string Markdown, or an empty string.
 	 */
-	private function viewport_line( array $context ) {
+	public static function viewport_line( array $context ) {
 		$width  = isset( $context['viewportWidth'] ) ? (int) $context['viewportWidth'] : 0;
 		$height = isset( $context['viewportHeight'] ) ? (int) $context['viewportHeight'] : 0;
 

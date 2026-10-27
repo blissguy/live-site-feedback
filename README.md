@@ -59,6 +59,7 @@ Updates are read from this repository's public releases, so no token or account 
 | `includes/class-mbm-lf-motion-tasks.php` | Turns queued changes into Motion tasks, comments and status changes. |
 | `includes/class-mbm-lf-feedback-screen.php` | The Comments screen, the Live Feedback menu and the dashboard widget. |
 | `includes/class-mbm-lf-admin-bar.php` | The Feedback item in the toolbar. |
+| `includes/class-mbm-lf-abilities.php` | Read-only abilities for AI agents, through the WordPress Abilities API. |
 | `includes/class-mbm-lf-settings.php` | Admin screen. |
 | `includes/class-mbm-lf-updater.php` | Updates from GitHub releases. |
 
@@ -95,6 +96,29 @@ define( 'MBM_LF_AUD', 'https://api.markup.io/v2/auth/exchange' );
 There is also one action, `mbm_lf_webhook_received`. Its payload is unauthenticated — MarkUp.io
 does not sign deliveries — so treat it as a hint that something changed and read the real state
 back through the API before acting on it. Don't rely on it arriving at all: see UPSTREAM.md §9.
+
+---
+
+## For AI agents
+
+On WordPress 6.9 and later the plugin registers three abilities with the
+[Abilities API](https://developer.wordpress.org/apis/abilities/), so an agent connected through an
+MCP adapter such as Novamira can read feedback without writing PHP against the plugin.
+
+| Ability | What it returns |
+| --- | --- |
+| `live-site-feedback/list-pages` | Every page with feedback: post ID, title, address, open and total counts, last activity. Pages with open comments first. |
+| `live-site-feedback/get-page-feedback` | The comments on one page, by `post_id` or `url`, with `status` of `open` (the default), `resolved` or `all`. |
+| `live-site-feedback/get-thread` | One comment by `thread_id`, in the same shape. Refuses comments from another site in the workspace. |
+
+Each comment comes back with its pin number, status, priority, author and dates, the full text of
+the comment and every reply, attached files (including the bar's screenshots), the pin's selector
+paths and position, the window size and browser it was left in, and links to open it on the page
+or in MarkUp.io. Both comment abilities also return a `markdown` field with all of that ready to
+read. Links in a comment keep their real target, which can differ from the text shown.
+
+They need the same permission as the Comments screen, `edit_posts`, and they only read. Nothing
+here lets an agent reply to a comment or resolve one.
 
 ---
 
