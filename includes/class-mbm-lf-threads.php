@@ -470,12 +470,13 @@ class MBM_LF_Threads {
 	 * and unseen ones look new, which is worse than no answer.
 	 *
 	 * @param string $markup_id Markup id.
+	 * @param int[]  $states    Which to ask for: 0 for open, 1 for resolved.
 	 * @return array|WP_Error Raw threads.
 	 */
-	public function fetch_all_raw( $markup_id ) {
+	public function fetch_all_raw( $markup_id, array $states = [ 0, 1 ] ) {
 		$threads = [];
 
-		foreach ( [ 0, 1 ] as $resolved ) {
+		foreach ( $states as $resolved ) {
 			$offset = 0;
 
 			do {
@@ -575,6 +576,298 @@ class MBM_LF_Threads {
 			// Straight to the comment, in the same form MarkUp.io's own links use.
 			'app_url'   => 'https://app.markup.io/markup/' . rawurlencode( (string) $markup_id ) . '/#thread/' . rawurlencode( (string) $thread['id'] ),
 		];
+	}
+
+	/**
+	 * Feedback on one page, in full.
+	 *
+	 * The cached list only says which markups hold this page's threads. The
+	 * threads themselves are read again, because the cached copy keeps an
+	 * excerpt and a count rather than what was actually said.
+	 *
+	 * @param int    $post_id Post id, or 0 to go by address.
+	 * @param string $url     Page address, used when there is no post id.
+	 * @param string $status  open, resolved or all.
+	 * @param bool   $force   Skip the cached list.
+	 * @return array{threads:array,error:string}
+	 */
+	public function page_threads( $post_id, $url, $status = 'open', $force = false ) {
+		$post_id = (int) $post_id;
+		$url     = (string) $url;
+
+		if ( ! $post_id && '' !== $url ) {
+			$post_id = url_to_postid( $url );
+		}
+
+		$target = $this->page_key(
+			[
+				'post_id' => $post_id,
+				'url'     => $url,
+			]
+		);
+
+		$data   = $this->all( $force );
+		$result = [
+			'threads' => [],
+			'error'   => $data['error'],
+		];
+
+		$markup_ids = [];
+
+		foreach ( $data['threads'] as $thread ) {
+			if ( $this->page_key( $thread ) === $target ) {
+				$markup_ids[ $thread['markup_id'] ] = true;
+			}
+		}
+
+		if ( 'open' === $status ) {
+			$states = [ 0 ];
+		} elseif ( 'resolved' === $status ) {
+			$states = [ 1 ];
+		} else {
+			$states = [ 0, 1 ];
+		}
+
+		foreach ( array_keys( $markup_ids ) as $markup_id ) {
+			$raw = $this->fetch_all_raw( (string) $markup_id, $states );
+
+			if ( is_wp_error( $raw ) ) {
+				$result['error'] = $raw->get_error_message();
+
+				continue;
+			}
+
+			// A shared list holds every page's threads, so filter again here.
+			foreach ( $raw as $thread ) {
+				$detail = $this->detail( $thread, (string) $markup_id );
+
+				if ( $detail && $this->page_key( $detail ) === $target ) {
+					$result['threads'][] = $detail;
+				}
+			}
+		}
+
+		// In pin order, the way they read on the page.
+		usort(
+			$result['threads'],
+			static function ( $a, $b ) {
+				return $a['number'] <=> $b['number'];
+			}
+		);
+
+		return $result;
+	}
+
+	/**
+	 * One thread, in full, as long as it belongs to this site.
+	 *
+	 * @param string $thread_id Thread id.
+	 * @return array|WP_Error
+	 */
+	public function thread( $thread_id ) {
+		$thread = mbm_lf_api()->request( 'GET', '/api/v2/threads/' . rawurlencode( (string) $thread_id ) );
+
+		if ( is_wp_error( $thread ) ) {
+			return $thread;
+		}
+
+		/*
+		 * `projectId` is the markup a thread belongs to: it matched the markup
+		 * id on every thread checked against a live site in October 2026. The
+		 * API key reads the whole workspace, so without this check any site
+		 * could be asked for another site's feedback.
+		 */
+		$markup_id = isset( $thread['projectId'] ) ? (string) $thread['projectId'] : '';
+
+		if ( '' === $markup_id || ! in_array( $markup_id, $this->owned_markup_ids(), true ) ) {
+			return new WP_Error(
+				'mbm_lf_not_ours',
+				__( 'That comment isn\'t on this site.', 'mbm-live-feedback' )
+			);
+		}
+
+		$detail = $this->detail( $thread, $markup_id );
+
+		if ( ! $detail ) {
+			return new WP_Error(
+				'mbm_lf_bad_response',
+				__( 'MarkUp.io sent a reply this site couldn\'t read.', 'mbm-live-feedback' )
+			);
+		}
+
+		return $detail;
+	}
+
+	/**
+	 * Everything said in a thread, and where and how it was left.
+	 *
+	 * The admin screen's normalise() keeps an excerpt and a reply count, which
+	 * is all a list needs. This keeps the full text of every message, the
+	 * attachments, the pin and the browser, for anyone acting on the feedback.
+	 * Field names follow what GET /threads actually returns.
+	 *
+	 * @param array  $thread    Thread from the API.
+	 * @param string $markup_id The markup it belongs to.
+	 * @return array|null
+	 */
+	public function detail( $thread, $markup_id ) {
+		$base = $this->normalise( $thread, $markup_id );
+
+		if ( ! $base ) {
+			return null;
+		}
+
+		$messages = [];
+
+		foreach ( (array) ( $thread['messages'] ?? [] ) as $message ) {
+			if ( ! is_array( $message ) || ! empty( $message['deletedAt'] ) ) {
+				continue;
+			}
+
+			$messages[] = [
+				'author'      => (string) ( $message['user']['name'] ?? '' ),
+				'date'        => $this->iso_date( $message['createdAt'] ?? 0 ),
+				'text'        => $this->message_text( $message ),
+				'attachments' => $this->attachments( $message ),
+			];
+		}
+
+		$first = $messages ? array_shift( $messages ) : [
+			'text'        => '',
+			'attachments' => [],
+		];
+
+		$elements = [];
+
+		foreach ( (array) ( $thread['elements'] ?? [] ) as $element ) {
+			if ( ! is_array( $element ) || empty( $element['path'] ) ) {
+				continue;
+			}
+
+			$elements[] = [
+				'path'     => (string) $element['path'],
+				'offset_x' => isset( $element['offsetXPercentage'] ) ? (float) $element['offsetXPercentage'] : null,
+				'offset_y' => isset( $element['offsetYPercentage'] ) ? (float) $element['offsetYPercentage'] : null,
+			];
+		}
+
+		$context = isset( $thread['browserContext'] ) && is_array( $thread['browserContext'] ) ? $thread['browserContext'] : [];
+
+		return [
+			'id'            => $base['id'],
+			'markup_id'     => $base['markup_id'],
+			'number'        => $base['number'],
+			'status'        => $base['resolved'] ? 'resolved' : 'open',
+			'priority'      => (string) ( $thread['priority']['name'] ?? '' ),
+			'author'        => $base['author'],
+			'created'       => $this->iso_date( $thread['createdAt'] ?? 0 ),
+			'last_activity' => $base['activity'] ? wp_date( 'c', $base['activity'] ) : '',
+			'message'       => $first['text'],
+			'attachments'   => $first['attachments'],
+			'replies'       => $messages,
+			'screenshot'    => (string) ( $thread['screenshot']['url'] ?? '' ),
+			'pin'           => [
+				'viewport_x' => isset( $thread['viewportXPercentage'] ) ? (float) $thread['viewportXPercentage'] : null,
+				'viewport_y' => isset( $thread['viewportYPercentage'] ) ? (float) $thread['viewportYPercentage'] : null,
+				'elements'   => $elements,
+			],
+			'browser'       => [
+				'viewport_width'  => (int) ( $context['viewportWidth'] ?? 0 ),
+				'viewport_height' => (int) ( $context['viewportHeight'] ?? 0 ),
+				'screen_width'    => (int) ( $context['screenWidth'] ?? 0 ),
+				'screen_height'   => (int) ( $context['screenHeight'] ?? 0 ),
+				'browser'         => (string) ( $context['browserName'] ?? '' ),
+				'browser_version' => (string) ( $context['browserVersion'] ?? '' ),
+				'os'              => (string) ( $context['os'] ?? '' ),
+				'os_version'      => (string) ( $context['osVersion'] ?? '' ),
+				'platform'        => (string) ( $context['platform'] ?? '' ),
+			],
+			'url'           => $base['url'],
+			'post_id'       => $base['post_id'],
+			'page_title'    => $this->page_title( $base ),
+			'page_link'     => $base['page_link'],
+			'app_url'       => $base['app_url'],
+		];
+	}
+
+	/**
+	 * What a message says, with its links and mentions intact.
+	 *
+	 * The plain `message` field keeps the text a link was written over but
+	 * drops where it points, and the two can differ: one real comment reads as
+	 * one Dropbox file and links to another. `messageJson.ops` keeps both, so
+	 * it is read first.
+	 *
+	 * @param array $message Message from the API.
+	 * @return string
+	 */
+	private function message_text( array $message ) {
+		$ops = $message['messageJson']['ops'] ?? null;
+
+		if ( is_array( $ops ) && $ops ) {
+			$text = '';
+
+			foreach ( $ops as $op ) {
+				$insert = is_array( $op ) && isset( $op['insert'] ) ? $op['insert'] : null;
+
+				if ( is_string( $insert ) ) {
+					$link  = isset( $op['attributes']['link'] ) && is_string( $op['attributes']['link'] ) ? $op['attributes']['link'] : '';
+					$text .= ( '' !== $link && $link !== $insert ) ? '[' . $insert . '](' . $link . ')' : $insert;
+				} elseif ( isset( $insert['messageTag']['name'] ) ) {
+					$text .= '@' . $insert['messageTag']['name'];
+				}
+			}
+
+			if ( '' !== trim( $text ) ) {
+				return trim( $text );
+			}
+		}
+
+		foreach ( [ 'message', 'content', 'text' ] as $key ) {
+			if ( ! empty( $message[ $key ] ) && is_string( $message[ $key ] ) ) {
+				return trim( $message[ $key ] );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Files attached to a message, including screenshots taken by the bar.
+	 *
+	 * @param array $message Message from the API.
+	 * @return array
+	 */
+	private function attachments( array $message ) {
+		$files = [];
+
+		foreach ( (array) ( $message['attachments'] ?? [] ) as $file ) {
+			if ( ! is_array( $file ) || empty( $file['url'] ) || ! empty( $file['deletedAt'] ) ) {
+				continue;
+			}
+
+			$files[] = [
+				'url'       => (string) $file['url'],
+				'filename'  => (string) ( $file['originalFilename'] ?? '' ),
+				'mime_type' => (string) ( $file['mimeType'] ?? '' ),
+				'width'     => (int) ( $file['width'] ?? 0 ),
+				'height'    => (int) ( $file['height'] ?? 0 ),
+			];
+		}
+
+		return $files;
+	}
+
+	/**
+	 * A time from the API as ISO 8601, in the site's timezone.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string Empty when there is none.
+	 */
+	private function iso_date( $value ) {
+		$timestamp = $this->to_timestamp( $value );
+
+		return $timestamp ? (string) wp_date( 'c', $timestamp ) : '';
 	}
 
 	/**

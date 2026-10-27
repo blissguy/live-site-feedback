@@ -73,6 +73,10 @@ The plugin removes its own settings and stops MarkUp.io notifying your site. You
 
 It checks its own repository for new releases and reports them to WordPress, so updating works exactly like any plugin from the WordPress directory. Nothing is sent anywhere and no account is needed.
 
+= Can an AI agent read the feedback? =
+
+Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities with the WordPress Abilities API, so an agent connected through an MCP adapter can list the pages with feedback and read every comment on a page in full, with replies, screenshots, where the pin is and the window size it was left at. Agents need the same permission as the Comments screen, and they can't reply to or resolve comments.
+
 == Changelog ==
 
 = 0.19.0 =

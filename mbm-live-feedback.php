@@ -94,6 +94,7 @@ require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-settings.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-queue.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-tasks.php';
 require_once MBM_LF_PATH . 'includes/class-mbm-lf-motion-watch.php';
+require_once MBM_LF_PATH . 'includes/class-mbm-lf-abilities.php';
 
 add_action( 'plugins_loaded', 'mbm_lf_bootstrap' );
 
@@ -119,6 +120,10 @@ function mbm_lf_bootstrap() {
 	// The toolbar shows on the front end as well, so this cannot live behind the
 	// is_admin() check below.
 	( new MBM_LF_Admin_Bar() )->hooks();
+
+	// Agents reach abilities through REST and MCP requests, which are neither
+	// admin nor front-end either.
+	( new MBM_LF_Abilities() )->hooks();
 
 	/*
 	 * Motion only wires itself in once a key exists. Without one there is no
