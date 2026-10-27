@@ -186,6 +186,10 @@ class MBM_LF_Settings {
 				<div class="mbm-lf-panel" data-panel="advanced">
 					<?php $this->render_expert_fields(); ?>
 
+					<h2 class="title"><?php esc_html_e( 'AI agents', 'mbm-live-feedback' ); ?></h2>
+
+					<?php $this->render_agent_fields(); ?>
+
 					<?php $this->render_status_table(); ?>
 
 					<p>
@@ -306,6 +310,35 @@ class MBM_LF_Settings {
 					<p class="description">
 						<?php esc_html_e( 'Clear it to make a new one.', 'mbm-live-feedback' ); ?>
 					</p>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Whether AI agents can read feedback through the Abilities API.
+	 */
+	private function render_agent_fields() {
+		?>
+		<table class="form-table" role="presentation">
+			<tbody>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Reading feedback', 'mbm-live-feedback' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="abilities" value="1" <?php checked( (bool) MBM_LF_Options::get( 'abilities' ) ); ?> />
+						<?php esc_html_e( 'Let AI agents read comments on this site', 'mbm-live-feedback' ); ?>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'For agents connected through an MCP adapter such as Novamira, signed in as someone who can edit posts. They can\'t reply to or resolve comments.', 'mbm-live-feedback' ); ?>
+					</p>
+					<?php if ( ! function_exists( 'wp_register_ability' ) ) : ?>
+						<p class="description">
+							<?php esc_html_e( 'Needs WordPress 6.9 or later.', 'mbm-live-feedback' ); ?>
+						</p>
+					<?php endif; ?>
 				</td>
 			</tr>
 			</tbody>
@@ -1518,6 +1551,7 @@ define( 'MBM_LF_PRIVATE_KEY_PATH', '/path/to/markup.pem' );</code></pre>
 			'screenshots'         => ! empty( $raw['screenshots'] ),
 			'archives'            => ! empty( $raw['archives'] ),
 			'review_link'         => ! empty( $raw['review_link'] ),
+			'abilities'           => ! empty( $raw['abilities'] ),
 			'review_expires'      => $last_day,
 			'placement'           => $placement,
 			'post_types'        => array_values( array_intersect( $post_types, $allowed_post_types ) ),

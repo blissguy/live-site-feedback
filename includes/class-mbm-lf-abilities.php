@@ -26,10 +26,11 @@ class MBM_LF_Abilities {
 	const CATEGORY = 'live-site-feedback';
 
 	/**
-	 * Wire up, on WordPress versions that have the Abilities API.
+	 * Wire up, on WordPress versions that have the Abilities API, unless
+	 * switched off on the Advanced tab.
 	 */
 	public function hooks() {
-		if ( ! function_exists( 'wp_register_ability' ) ) {
+		if ( ! function_exists( 'wp_register_ability' ) || ! MBM_LF_Options::get( 'abilities' ) ) {
 			return;
 		}
 

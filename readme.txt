@@ -4,7 +4,7 @@ Tags: feedback, comments, client review, annotations, website review
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.19.0
+Stable tag: 0.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,9 +75,12 @@ It checks its own repository for new releases and reports them to WordPress, so 
 
 = Can an AI agent read the feedback? =
 
-Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities with the WordPress Abilities API, so an agent connected through an MCP adapter can list the pages with feedback and read every comment on a page in full, with replies, screenshots, where the pin is and the window size it was left at. Agents need the same permission as the Comments screen, and they can't reply to or resolve comments.
+Yes, on WordPress 6.9 and later. The plugin registers three read-only abilities with the WordPress Abilities API, so an agent connected through an MCP adapter can list the pages with feedback and read every comment on a page in full, with replies, screenshots, where the pin is and the window size it was left at. Agents need the same permission as the Comments screen, and they can't reply to or resolve comments. To turn this off, uncheck "Let AI agents read comments on this site" on the Advanced tab of the settings.
 
 == Changelog ==
+
+= 0.20.0 =
+* New: AI agents connected through an MCP adapter such as Novamira can list the pages with feedback and read every comment on a page in full, with replies, screenshots, where the pin is and the window size it was left at. They can't reply to or resolve comments. Needs WordPress 6.9 or later, and can be turned off on the Advanced tab.
 
 = 0.19.0 =
 * New: review link. Anyone who opens it can leave feedback, logged in or not. It can be replaced at any time and given a last day.

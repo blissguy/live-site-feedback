@@ -69,6 +69,7 @@ class MBM_LF_Options {
 			'review_link'       => false,
 			'review_key'        => '',
 			'review_expires'    => '',
+			'abilities'         => true,
 		];
 	}
 
